@@ -2,27 +2,29 @@
 #
 # 2-test-extension.sh — Super Volume
 # ─────────────────────────────────────────────────────────────────────────
-# Abre Google Chrome (o Chromium/Edge) con la extensión "Super Volume" ya
-# cargada, usando un perfil de pruebas SEPARADO en /tmp para no tocar tu
-# sesión, extensiones ni sesiones abiertas del Chrome que usas normalmente.
-# Ideal para probar cambios rápidamente mientras desarrollas.
+# Deja la extensión lista para probar de un solo comando:
+#
+#   1. Abre Chrome en un perfil de pruebas AISLADO en /tmp (no toca tu
+#      perfil ni tus sesiones habituales).
+#   2. Activa "Developer mode" automáticamente (Chrome ya no acepta
+#      extensiones descomprimidas sin esto).
+#   3. Carga Super Volume con el método oficial del DevTools Protocol
+#      (Extensions.loadUnpacked) — el reemplazo moderno de --load-extension,
+#      que Chrome empezó a ignorar si Developer mode está apagado.
+#   4. Abre YouTube (o la URL que le pases) para que pruebes directo.
 #
 # Uso:
-#   ./scripts/2-test-extension.sh                # abre Chrome con la extensión cargada
-#   ./scripts/2-test-extension.sh https://youtube.com/watch?v=dQw4w9WgXcQ
-#                                                 # además abre esa URL de una vez
-#
-# Nota: --load-extension es la forma oficial de Chrome para cargar una
-# extensión descomprimida desde línea de comandos. Para instalarla de forma
-# permanente en tu perfil habitual usa ./scripts/1-install.sh.
+#   ./scripts/2-test-extension.sh
+#   ./scripts/2-test-extension.sh https://www.netflix.com/
 
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PROFILE_DIR="/tmp/super-volume-test-profile"
-URL="${1:-}"
+PORT=9333
+URL="${1:-https://www.youtube.com/shorts/hY0Xz-GBPh8}"
+# URL="${1:-https://www.youtube.com/watch?v=jNQXAC9IVRw}"
 
-# Busca un navegador basado en Chromium disponible en el sistema.
 BROWSER=""
 for bin in google-chrome google-chrome-stable chromium chromium-browser microsoft-edge microsoft-edge-stable; do
   if command -v "$bin" >/dev/null 2>&1; then
@@ -33,7 +35,11 @@ done
 
 if [[ -z "$BROWSER" ]]; then
   echo "No se encontró Chrome/Chromium/Edge instalado en el sistema." >&2
-  echo "Instala Google Chrome o abre manualmente chrome://extensions y usa 'Cargar descomprimida'." >&2
+  exit 1
+fi
+
+if ! command -v python3 >/dev/null 2>&1; then
+  echo "Se necesita python3 para automatizar la carga (no se encontró en PATH)." >&2
   exit 1
 fi
 
@@ -42,6 +48,11 @@ if [[ ! -f "$ROOT_DIR/manifest.json" ]]; then
   exit 1
 fi
 
+# Perfil siempre fresco: evita acumular recargas duplicadas de la extensión
+# entre corridas y garantiza un estado predecible.
+pkill -9 -f "user-data-dir=$PROFILE_DIR" >/dev/null 2>&1 || true
+sleep 0.5
+rm -rf "$PROFILE_DIR"
 mkdir -p "$PROFILE_DIR"
 
 echo "Navegador: $BROWSER"
@@ -49,21 +60,26 @@ echo "Extensión: $ROOT_DIR"
 echo "Perfil de pruebas: $PROFILE_DIR (aislado, no afecta tu perfil normal)"
 echo
 
-ARGS=(
-  --user-data-dir="$PROFILE_DIR"
-  --load-extension="$ROOT_DIR"
-  --no-first-run
-  --no-default-browser-check
-)
-
-if [[ -n "$URL" ]]; then
-  ARGS+=("$URL")
-else
-  ARGS+=("chrome://extensions")
-fi
-
-"$BROWSER" "${ARGS[@]}" >/dev/null 2>&1 &
+"$BROWSER" \
+  --user-data-dir="$PROFILE_DIR" \
+  --remote-debugging-port="$PORT" \
+  --no-first-run \
+  --no-default-browser-check \
+  about:blank \
+  >/dev/null 2>&1 &
 disown
 
-echo "Chrome se está abriendo con Super Volume ya cargada."
-echo "Si no ves el icono en la barra, haz clic en la pieza de rompecabezas (⋮ extensiones) y fíjala."
+echo "Chrome abriéndose... activando Developer mode e instalando la extensión..."
+
+if python3 "$(dirname "${BASH_SOURCE[0]}")/_cdp_loader.py" "$PORT" "$ROOT_DIR" "$URL"; then
+  echo
+  echo "Listo. Super Volume está instalada y activa en esta ventana de Chrome."
+  echo "Abre el popup (icono de la barra de extensiones) sobre la pestaña de YouTube y mueve el slider."
+else
+  echo
+  echo "No se pudo automatizar la instalación (ver error arriba)." >&2
+  echo "Puedes hacerlo a mano: en la ventana que se abrió, ve a chrome://extensions," >&2
+  echo "activa 'Developer mode' y usa 'Cargar descomprimida' seleccionando:" >&2
+  echo "  $ROOT_DIR" >&2
+  exit 1
+fi
