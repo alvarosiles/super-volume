@@ -1,0 +1,398 @@
+/**
+ * popup.css — Super Volume
+ * ─────────────────────────────────────────────────────────────────────────
+ * Tema oscuro inspirado en las apps de Google (Chrome, YouTube, Google
+ * Home): fondo #202124, tarjetas #2d2f33, acento azul #4285F4, bordes
+ * redondeados y transiciones suaves en todos los elementos interactivos.
+ */
+
+:root {
+  --bg: #202124;
+  --card: #2d2f33;
+  --card-hover: #34363b;
+  --accent: #4285f4;
+  --accent-hover: #5b95f5;
+  --accent-active: #3367d6;
+  --text-primary: #ffffff;
+  --text-secondary: #9aa0a6;
+  --border: #3c4043;
+  --danger: #f28b82;
+  --radius-lg: 16px;
+  --radius-md: 12px;
+  --radius-sm: 8px;
+  --transition-fast: 150ms ease;
+  --transition-medium: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  width: 320px;
+  background: var(--bg);
+  color: var(--text-primary);
+  font-family: 'Segoe UI', Roboto, -apple-system, BlinkMacSystemFont, Arial, sans-serif;
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+  animation: popup-in var(--transition-medium);
+}
+
+@keyframes popup-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+}
+
+/* ── Encabezado ──────────────────────────────────────────────────────── */
+
+.app__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.app__brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.app__title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.1px;
+}
+
+.app__version {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.icon {
+  width: 20px;
+  height: 20px;
+  fill: currentColor;
+  flex-shrink: 0;
+}
+
+.icon--brand {
+  width: 24px;
+  height: 24px;
+  color: var(--accent);
+  display: inline-flex;
+}
+.icon--brand svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* ── Tarjetas genéricas ──────────────────────────────────────────────── */
+
+.card {
+  background: var(--card);
+  border-radius: var(--radius-lg);
+  padding: 12px 14px;
+  transition: background var(--transition-fast);
+}
+
+/* ── Tarjeta del sitio actual ────────────────────────────────────────── */
+
+.site-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.site-card__favicon {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.site-card__info {
+  min-width: 0;
+  flex: 1;
+}
+
+.site-card__title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.site-card__domain {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.badge--warning {
+  background: rgba(242, 139, 130, 0.15);
+  color: var(--danger);
+}
+
+/* ── Tarjeta de volumen ──────────────────────────────────────────────── */
+
+.volume-card__row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.volume-card__label {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.volume-card__value {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+  transition: color var(--transition-fast);
+}
+
+.volume-card__value--boosted {
+  color: #fbbc04;
+}
+
+.volume-card__value--muted {
+  color: var(--danger);
+}
+
+.volume-card__scale {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  font-size: 10px;
+  color: var(--text-secondary);
+}
+
+/* ── Slider ──────────────────────────────────────────────────────────── */
+
+.slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  border-radius: 999px;
+  outline: none;
+  cursor: pointer;
+  /* El fondo se recalcula desde popup.js con un gradiente que representa
+     el porcentaje actual (relleno azul hasta el thumb, gris después). */
+  background: linear-gradient(to right, var(--accent) 0%, var(--accent) 16.66%, var(--border) 16.66%);
+  transition: background var(--transition-fast);
+}
+
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 3px solid var(--text-primary);
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+  transition: transform var(--transition-fast), background var(--transition-fast);
+}
+
+.slider:hover::-webkit-slider-thumb {
+  transform: scale(1.15);
+}
+
+.slider:active::-webkit-slider-thumb {
+  transform: scale(1.25);
+  background: var(--accent-active);
+}
+
+.slider::-moz-range-track {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--border);
+}
+
+.slider::-moz-range-progress {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--accent);
+}
+
+.slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 3px solid var(--text-primary);
+  cursor: pointer;
+  transition: transform var(--transition-fast);
+}
+
+.slider:hover::-moz-range-thumb {
+  transform: scale(1.15);
+}
+
+/* ── Botones de acción ───────────────────────────────────────────────── */
+
+.actions {
+  display: flex;
+  gap: 10px;
+}
+
+.btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 12px;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background var(--transition-fast), transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.btn--secondary {
+  background: var(--card);
+  border: 1px solid var(--border);
+}
+
+.btn--secondary:hover {
+  background: var(--card-hover);
+  border-color: var(--accent);
+}
+
+.btn:active {
+  transform: scale(0.96);
+}
+
+.btn[aria-pressed="true"] {
+  background: rgba(242, 139, 130, 0.15);
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.btn[aria-pressed="true"] .icon {
+  color: var(--danger);
+}
+
+/* ── Ajustes / interruptor ───────────────────────────────────────────── */
+
+.switch-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 36px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.switch input {
+  position: absolute;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  cursor: pointer;
+}
+
+.switch__track {
+  position: absolute;
+  inset: 0;
+  background: var(--border);
+  border-radius: 999px;
+  transition: background var(--transition-medium);
+}
+
+.switch__thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--text-primary);
+  transition: transform var(--transition-medium);
+}
+
+.switch input:checked ~ .switch__track {
+  background: var(--accent);
+}
+
+.switch input:checked ~ .switch__track .switch__thumb {
+  transform: translateX(16px);
+}
+
+.switch input:focus-visible ~ .switch__track {
+  outline: 2px solid var(--accent-hover);
+  outline-offset: 2px;
+}
+
+/* ── Pie de página ───────────────────────────────────────────────────── */
+
+.app__footer {
+  min-height: 14px;
+  text-align: center;
+}
+
+.app__status {
+  font-size: 11px;
+  color: var(--text-secondary);
+  transition: opacity var(--transition-fast);
+}
+
+/* ── Utilidades ──────────────────────────────────────────────────────── */
+
+.hidden {
+  display: none !important;
+}
+
+.card--disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
