@@ -24,3 +24,32 @@ css
 audio
 browser-extension
 google-chrome
+
+
+
+cualizador
+
+
+
+Presets: Música, Películas, Voz, Graves, Agudos.
+
+Ecualizador de 10 bandas para usuarios avanzados.
+
+
+
+Accesos rápidos
+
+
+
+Atajos de teclado.
+
+
+
+Bajo consumo
+
+Procesar solo las pestañas que emiten sonido.
+
+Suspender el procesamiento cuando no hay audio.
+
+
+

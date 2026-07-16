@@ -108,6 +108,17 @@
     scope.querySelectorAll('video, audio').forEach(attachElement);
   }
 
+  /** Crea el grafo de audio (si hace falta), conecta `elements` y aplica la ganancia actual. */
+  function activateBoost(elements) {
+    ensureAudioGraph();
+    elements.forEach(attachElement);
+
+    if (!state.muted) {
+      // setTargetAtTime evita "clicks"/saltos bruscos al mover el slider.
+      state.gainNode.gain.setTargetAtTime(state.currentPercent / 100, state.audioContext.currentTime, 0.015);
+    }
+  }
+
   /** Aplica el porcentaje de volumen (0-600) al GainNode compartido. */
   function applyVolume(percent) {
     const clamped = Math.min(MAX_VOLUME_PERCENT, Math.max(0, Number(percent) || 0));
@@ -119,13 +130,19 @@
       return;
     }
 
-    ensureAudioGraph();
-    scanAndAttach(document);
+    const elements = document.querySelectorAll('video, audio');
 
-    if (!state.muted) {
-      // setTargetAtTime evita "clicks"/saltos bruscos al mover el slider.
-      state.gainNode.gain.setTargetAtTime(clamped / 100, state.audioContext.currentTime, 0.015);
+    // Si todavía no hay ningún <video>/<audio> en la página (p. ej. un sitio
+    // sin medios, o un SPA que aún no montó su reproductor) no tiene sentido
+    // crear un AudioContext sin nada que amplificar: además de ser trabajo
+    // desperdiciado, Chrome registra una advertencia de autoplay porque ese
+    // contexto nace suspendido sin gesto de usuario. El MutationObserver se
+    // encargará de crear el grafo en cuanto aparezca un elemento real.
+    if (!state.audioContext && elements.length === 0) {
+      return;
     }
+
+    activateBoost(elements);
   }
 
   /** Activa o desactiva el mute conservando el volumen previo. */
@@ -134,10 +151,16 @@
 
     if (shouldMute) {
       state.percentBeforeMute = state.currentPercent;
-      ensureAudioGraph();
-      scanAndAttach(document);
       state.muted = true;
-      state.gainNode.gain.setTargetAtTime(0, state.audioContext.currentTime, 0.01);
+
+      // Igual que en applyVolume: sin elementos reales no hace falta crear
+      // el AudioContext todavía (el observer lo hará si aparece uno).
+      const elements = document.querySelectorAll('video, audio');
+      if (state.audioContext || elements.length > 0) {
+        ensureAudioGraph();
+        elements.forEach(attachElement);
+        state.gainNode.gain.setTargetAtTime(0, state.audioContext.currentTime, 0.01);
+      }
     } else {
       state.muted = false;
       applyVolume(state.percentBeforeMute);
@@ -167,19 +190,32 @@
     if (state.observer) return;
 
     state.observer = new MutationObserver((mutations) => {
-      // Solo nos interesa reaccionar si ya hay un boost activo (audioContext
-      // creado) o si el elemento nuevo necesita quedar registrado para un
-      // futuro cambio de volumen. Igualmente es una operación barata.
+      // Si el volumen sigue en 100% y no estamos en mute, no hay boost que
+      // mantener: ignoramos por completo los elementos nuevos (barato y sin
+      // crear ningún AudioContext de más).
+      if (state.currentPercent === 100 && !state.muted) return;
+
       for (const mutation of mutations) {
         mutation.addedNodes.forEach((node) => {
           if (node.nodeType !== Node.ELEMENT_NODE) return;
+
+          let found = [];
           if (node.tagName === 'VIDEO' || node.tagName === 'AUDIO') {
-            if (state.audioContext) attachElement(node);
+            found = [node];
           } else if (node.querySelectorAll) {
-            const found = node.querySelectorAll('video, audio');
-            if (found.length && state.audioContext) {
-              found.forEach(attachElement);
-            }
+            found = Array.from(node.querySelectorAll('video, audio'));
+          }
+          if (!found.length) return;
+
+          if (state.audioContext) {
+            found.forEach(attachElement);
+            const target = state.muted ? 0 : state.currentPercent / 100;
+            state.gainNode.gain.setTargetAtTime(target, state.audioContext.currentTime, 0.015);
+          } else {
+            // Primer elemento real de la página: recién ahora vale la pena
+            // crear el AudioContext.
+            activateBoost(found);
+            if (state.muted) state.gainNode.gain.setTargetAtTime(0, state.audioContext.currentTime, 0.01);
           }
         });
       }
@@ -220,7 +256,13 @@
   // ── Inicialización ──────────────────────────────────────────────────────
   function init() {
     startObserving();
-    scanAndAttach(document);
+
+    // Nota: NO se hace un scanAndAttach(document) aquí. Conectar un elemento
+    // al grafo de Web Audio exige crear el AudioContext, y hacerlo en cada
+    // carga de página (aunque el volumen siga en 100%) es exactamente el
+    // desperdicio que este archivo dice evitar. applyVolume() ya se encarga
+    // de escanear y conectar los elementos la primera vez que de verdad
+    // hace falta (volumen ≠ 100% o mute).
 
     // Si el usuario activó "recordar volumen por sitio", aplicamos de una
     // vez el valor guardado para este dominio (si existe y no es 100%).
