@@ -20,7 +20,7 @@ Facebook Videos, Vimeo, TikTok, etc.).
 2. [Estructura del proyecto](#estructura-del-proyecto)
 3. [Cómo funciona (arquitectura)](#cómo-funciona-arquitectura)
 4. [Instalación en modo desarrollador](#instalación-en-modo-desarrollador)
-5. [Publicar en la Chrome Web Store](#publicar-en-la-chrome-web-store)
+5. [Publicar en la Chrome Web Store](#publicar-en-la-chrome-web-store) — guía completa en [PUBLISHING.md](PUBLISHING.md)
 6. [Personalización](#personalización)
    - [Cambiar los iconos](#cambiar-los-iconos)
    - [Cambiar los colores](#cambiar-los-colores)
@@ -157,27 +157,20 @@ obligatorio por seguridad); `1-install.sh` automatiza todo lo demás.
 
 ## Publicar en la Chrome Web Store
 
-1. Crea una cuenta de desarrollador en el
-   [Chrome Web Store Developer Dashboard](https://chrome.google.com/webstore/devconsole)
-   (pago único de registro).
-2. Genera el `.zip` con el script de compilación (valida `manifest.json`,
-   revisa la sintaxis de los `.js` y empaqueta solo los archivos que la
-   extensión necesita en tiempo de ejecución):
-   ```bash
-   ./scripts/3-build.sh
-   # → dist/super-volume-v1.0.0.zip
-   ```
-3. En el Dashboard, pulsa **"New Item"** y sube el `.zip` de `dist/`.
-4. Completa la ficha de la Store:
-   - Descripción corta y larga.
-   - Capturas de pantalla del popup (1280×800 o 640×400).
-   - Icono promocional (opcional, 440×280).
-   - Categoría: *Herramientas* o *Productividad*.
-   - **Justificación de permisos**: explica que `<all_urls>` y `activeTab`
-     son necesarios para detectar y amplificar el audio de cualquier
-     página que el usuario visite (ver [Permisos utilizados](#permisos-utilizados)).
-5. Envía a revisión. El proceso de Google suele tardar entre unas horas y
-   varios días.
+Guía completa, paso a paso (ficha del Store, justificación de permisos,
+política de privacidad, el error de verificación en 2 pasos, cómo subir
+actualizaciones...) en **[PUBLISHING.md](PUBLISHING.md)**.
+
+Resumen rápido:
+
+```bash
+./scripts/3-build.sh
+# → dist/super-volume-v1.0.0.zip
+```
+
+Sube ese `.zip` en el
+[Chrome Web Store Developer Dashboard](https://chrome.google.com/webstore/devconsole)
+con **"+ Nuevo elemento"**, completa la ficha y envía a revisión.
 
 ---
 
