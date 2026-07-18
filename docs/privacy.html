@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Super Volume — Política de Privacidad</title>
+<style>
+  :root {
+    --bg: #f7f6f3;
+    --bg-raised: #ffffff;
+    --ink: #1c1d1f;
+    --ink-soft: #4a4c50;
+    --ink-faint: #85878c;
+    --line: #dfddd6;
+    --accent: #3a63c9;
+    --accent-soft: #eaf0fc;
+    --good: #1e7d4f;
+    --radius: 10px;
+    --serif: Georgia, 'Iowan Old Style', 'Palatino Linotype', 'Book Antiqua', serif;
+    --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    --mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #17181a;
+      --bg-raised: #1f2023;
+      --ink: #eceae4;
+      --ink-soft: #b7b6b1;
+      --ink-faint: #7d7d7f;
+      --line: #35373a;
+      --accent: #7fa2ee;
+      --accent-soft: #212a3d;
+      --good: #55c58c;
+    }
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--sans);
+    line-height: 1.6;
+  }
+
+  .page {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 72px 24px 120px;
+  }
+
+  .masthead {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 40px;
+  }
+
+  .mark {
+    width: 34px;
+    height: 34px;
+    flex-shrink: 0;
+    color: var(--accent);
+  }
+  .mark svg { width: 100%; height: 100%; fill: currentColor; }
+
+  .mastname {
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+
+  .masttag {
+    font-size: 12.5px;
+    color: var(--ink-faint);
+  }
+
+  h1 {
+    font-family: var(--serif);
+    font-size: 40px;
+    font-weight: 400;
+    line-height: 1.18;
+    letter-spacing: -0.01em;
+    margin: 0 0 10px;
+    text-wrap: balance;
+    color: var(--ink);
+  }
+
+  .subline {
+    font-size: 15.5px;
+    color: var(--ink-soft);
+    margin: 0 0 6px;
+  }
+
+  .meta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 18px;
+    font-size: 13px;
+    color: var(--ink-faint);
+    font-variant-numeric: tabular-nums;
+    margin: 22px 0 44px;
+    padding-top: 18px;
+    border-top: 1px solid var(--line);
+  }
+  .meta-row strong { color: var(--ink-soft); font-weight: 600; }
+
+  .summary {
+    background: var(--accent-soft);
+    border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+    border-radius: var(--radius);
+    padding: 22px 24px;
+    margin: 0 0 48px;
+  }
+
+  .summary h2 {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    color: var(--accent);
+    margin: 0 0 12px;
+    font-weight: 700;
+  }
+
+  .summary ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: 9px;
+  }
+
+  .summary li {
+    display: flex;
+    gap: 10px;
+    font-size: 14.5px;
+    color: var(--ink);
+  }
+
+  .summary li svg {
+    width: 17px;
+    height: 17px;
+    flex-shrink: 0;
+    margin-top: 2px;
+    fill: var(--good);
+  }
+
+  section {
+    margin: 0 0 40px;
+  }
+
+  h2.section-title {
+    font-family: var(--serif);
+    font-size: 22px;
+    font-weight: 400;
+    margin: 0 0 14px;
+    color: var(--ink);
+  }
+
+  p { margin: 0 0 14px; font-size: 15.5px; color: var(--ink); max-width: 62ch; }
+  p:last-child { margin-bottom: 0; }
+
+  .fine {
+    font-size: 13.5px;
+    color: var(--ink-faint);
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+    margin: 4px 0 6px;
+  }
+
+  caption { display: none; }
+
+  th, td {
+    text-align: left;
+    padding: 11px 14px;
+    border-bottom: 1px solid var(--line);
+    vertical-align: top;
+  }
+
+  th {
+    font-size: 11.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--ink-faint);
+    font-weight: 600;
+    padding-top: 0;
+  }
+
+  td:first-child, th:first-child {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--accent);
+    white-space: nowrap;
+    padding-left: 0;
+  }
+
+  .table-wrap { overflow-x: auto; }
+
+  .no-list {
+    margin: 4px 0 14px;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: 10px;
+  }
+  .no-list li {
+    display: flex;
+    gap: 10px;
+    font-size: 15px;
+    color: var(--ink);
+  }
+  .no-list li::before {
+    content: "—";
+    color: var(--ink-faint);
+    flex-shrink: 0;
+  }
+
+  .contact-card {
+    background: var(--bg-raised);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 22px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+
+  .contact-card a {
+    color: var(--accent);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 15px;
+    border-bottom: 1px solid transparent;
+  }
+  .contact-card a:hover,
+  .contact-card a:focus-visible { border-bottom-color: var(--accent); }
+  .contact-card a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 3px; }
+
+  footer {
+    margin-top: 64px;
+    padding-top: 20px;
+    border-top: 1px solid var(--line);
+    font-size: 12.5px;
+    color: var(--ink-faint);
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  a { color: var(--accent); }
+
+  @media (max-width: 560px) {
+    h1 { font-size: 32px; }
+    .page { padding: 48px 18px 80px; }
+    .contact-card { flex-direction: column; align-items: flex-start; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="masthead">
+    <span class="mark" aria-hidden="true">
+      <svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-.99-3.29-2.5-4.03v8.05c1.51-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+    </span>
+    <div>
+      <div class="mastname">Super Volume</div>
+      <div class="masttag">Extensión para Google Chrome</div>
+    </div>
+  </div>
+
+  <h1>Política de Privacidad</h1>
+  <p class="subline">Cómo Super Volume trata (y en gran parte, no trata) tus datos.</p>
+
+  <div class="meta-row">
+    <span><strong>Vigente desde:</strong> 18 de julio de 2026</span>
+    <span><strong>Versión de la extensión:</strong> 1.0.0</span>
+    <span><strong>Contacto:</strong> servisofts.srl@gmail.com</span>
+  </div>
+
+  <div class="summary">
+    <h2>En una frase</h2>
+    <ul>
+      <li>
+        <svg viewBox="0 0 24 24"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg>
+        Todo el procesamiento de audio ocurre en tu navegador. Nada se envía a ningún servidor.
+      </li>
+      <li>
+        <svg viewBox="0 0 24 24"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg>
+        Lo único que se guarda es el nivel de volumen que elegiste, por dominio, en tu propio dispositivo.
+      </li>
+      <li>
+        <svg viewBox="0 0 24 24"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg>
+        No hay cuentas, no hay analítica, no hay publicidad, no hay terceros.
+      </li>
+    </ul>
+  </div>
+
+  <section>
+    <h2 class="section-title">Qué hace la extensión</h2>
+    <p>
+      Super Volume amplifica el volumen de la pestaña activa hasta 600%, usando
+      la Web Audio API del propio navegador (<code>AudioContext</code> +
+      <code>GainNode</code>). El ajuste se aplica a los elementos de video y
+      audio de esa página; el volumen del sistema operativo nunca se modifica.
+    </p>
+  </section>
+
+  <section>
+    <h2 class="section-title">Qué datos se recopilan</h2>
+    <p><strong>Ninguno se transmite fuera de tu dispositivo.</strong> La extensión guarda localmente, mediante <code>chrome.storage.local</code>, lo siguiente:</p>
+    <div class="table-wrap">
+      <table>
+        <caption>Datos almacenados localmente</caption>
+        <thead>
+          <tr><th scope="col">Dato</th><th scope="col">Para qué</th><th scope="col">Dónde vive</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Nivel de volumen (0–600%) por dominio</td>
+            <td>Reaplicar automáticamente tu ajuste preferido al volver a un sitio</td>
+            <td>Tu dispositivo, vía <code>chrome.storage.local</code></td>
+          </tr>
+          <tr>
+            <td>Preferencia "recordar volumen"</td>
+            <td>Activar o desactivar el guardado por dominio</td>
+            <td>Tu dispositivo, vía <code>chrome.storage.local</code></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="fine">Estos datos no incluyen tu identidad, historial de navegación, contenido de las páginas, ni ninguna otra información personal.</p>
+  </section>
+
+  <section>
+    <h2 class="section-title">Qué NO hace la extensión</h2>
+    <ul class="no-list">
+      <li>No recolecta información de identificación personal, financiera, de salud ni credenciales.</li>
+      <li>No registra tu historial de navegación ni el contenido de los sitios que visitás.</li>
+      <li>No envía datos a servidores propios ni de terceros — no hay backend.</li>
+      <li>No vende ni transfiere datos a nadie, bajo ninguna circunstancia.</li>
+      <li>No usa cookies, píxeles de seguimiento ni analítica de ningún tipo.</li>
+      <li>No carga código remoto: todo el JavaScript viene empaquetado en la extensión.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2 class="section-title">Permisos que solicita, y por qué</h2>
+    <div class="table-wrap">
+      <table>
+        <caption>Permisos del manifest</caption>
+        <thead>
+          <tr><th scope="col">Permiso</th><th scope="col">Motivo</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>storage</td>
+            <td>Guardar localmente el volumen por dominio y la preferencia de "recordar volumen".</td>
+          </tr>
+          <tr>
+            <td>activeTab</td>
+            <td>Identificar la pestaña activa al abrir el popup, para mostrar su favicon, título y dominio.</td>
+          </tr>
+          <tr>
+            <td>host_permissions<br>&lt;all_urls&gt;</td>
+            <td>Inyectar el script de contenido en cualquier sitio para detectar y amplificar sus elementos de video/audio, sin depender de una lista fija de dominios soportados.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="section-title">Cómo borrar tus datos</h2>
+    <p>
+      Como todo se guarda en tu propio navegador, alcanza con desinstalar la extensión desde
+      <code>chrome://extensions</code>, o borrar sus datos de almacenamiento desde
+      la misma pantalla de gestión de extensiones. No hay ninguna cuenta ni servidor
+      del que solicitar el borrado.
+    </p>
+  </section>
+
+  <section>
+    <h2 class="section-title">Cambios a esta política</h2>
+    <p>
+      Si esta política cambia, la fecha de "Vigente desde" en la parte superior
+      se actualizará. Cambios importantes en el tratamiento de datos se
+      reflejarán también en la ficha de la extensión en la Chrome Web Store.
+    </p>
+  </section>
+
+  <div class="contact-card">
+    <div>
+      <div style="font-size:14px; color:var(--ink-soft); margin-bottom:4px;">¿Preguntas sobre esta política?</div>
+      <div style="font-size:15px;">Escribinos directamente.</div>
+    </div>
+    <a href="mailto:servisofts.srl@gmail.com">servisofts.srl@gmail.com</a>
+  </div>
+
+  <footer>
+    <span>Super Volume — Alvaro Siles</span>
+    <span>github.com/alvarosiles/super-volume</span>
+  </footer>
+
+</div>
+</body>
+</html>
