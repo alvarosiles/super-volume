@@ -1,5 +1,5 @@
 # 🔊 Super Volume
-
+<!-- https://claude.ai/code/artifact/9396f99c-1b3e-493b-9532-e70f81f988b5?via=auto_preview -->
 Extensión para **Google Chrome** (Manifest V3) que permite aumentar el volumen
 de la pestaña activa hasta **600%** usando la **Web Audio API** (`AudioContext`
 + `GainNode`), sin tocar en ningún momento el volumen del sistema operativo.
