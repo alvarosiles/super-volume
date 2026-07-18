@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Super Volume — Sube el volumen de cualquier pestaña hasta 600%</title>
+<meta name="description" content="Extensión para Chrome que amplifica el volumen de la pestaña activa hasta 600% con Web Audio API, sin tocar el volumen del sistema operativo." />
+<style>
+  :root {
+    --bg: #f7f6f3;
+    --bg-raised: #ffffff;
+    --ink: #1c1d1f;
+    --ink-soft: #4a4c50;
+    --ink-faint: #85878c;
+    --line: #dfddd6;
+    --accent: #3a63c9;
+    --accent-soft: #eaf0fc;
+    --good: #1e7d4f;
+    --radius: 10px;
+    --serif: Georgia, 'Iowan Old Style', 'Palatino Linotype', 'Book Antiqua', serif;
+    --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    --mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #17181a;
+      --bg-raised: #1f2023;
+      --ink: #eceae4;
+      --ink-soft: #b7b6b1;
+      --ink-faint: #7d7d7f;
+      --line: #35373a;
+      --accent: #7fa2ee;
+      --accent-soft: #212a3d;
+      --good: #55c58c;
+    }
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--sans);
+    line-height: 1.6;
+  }
+
+  .page {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 72px 24px 100px;
+  }
+
+  .masthead {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 56px;
+  }
+
+  .mark {
+    width: 34px;
+    height: 34px;
+    flex-shrink: 0;
+    color: var(--accent);
+  }
+  .mark svg { width: 100%; height: 100%; fill: currentColor; }
+
+  .mastname { font-size: 15px; font-weight: 700; letter-spacing: 0.02em; }
+  .masttag { font-size: 12.5px; color: var(--ink-faint); }
+
+  .eyebrow {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    color: var(--accent);
+    font-weight: 700;
+    margin-bottom: 14px;
+  }
+
+  h1 {
+    font-family: var(--serif);
+    font-size: 46px;
+    font-weight: 400;
+    line-height: 1.14;
+    letter-spacing: -0.01em;
+    margin: 0 0 18px;
+    text-wrap: balance;
+    color: var(--ink);
+  }
+  h1 em { color: var(--accent); font-style: normal; }
+
+  .lede {
+    font-size: 18px;
+    color: var(--ink-soft);
+    max-width: 56ch;
+    margin: 0 0 32px;
+  }
+
+  .cta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 64px;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 13px 22px;
+    border-radius: 999px;
+    font-size: 15px;
+    font-weight: 600;
+    text-decoration: none;
+    border: 1px solid transparent;
+    transition: transform 120ms ease, background 120ms ease, border-color 120ms ease;
+  }
+  .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+  .btn svg { width: 17px; height: 17px; fill: currentColor; flex-shrink: 0; }
+
+  .btn--primary { background: var(--accent); color: #fff; }
+  .btn--primary:hover { transform: translateY(-1px); }
+
+  .btn--ghost {
+    background: transparent;
+    color: var(--ink);
+    border-color: var(--line);
+  }
+  .btn--ghost:hover { border-color: var(--accent); color: var(--accent); }
+
+  section { margin: 0 0 56px; }
+
+  h2.section-title {
+    font-family: var(--serif);
+    font-size: 24px;
+    font-weight: 400;
+    margin: 0 0 20px;
+    color: var(--ink);
+  }
+
+  .features {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
+  }
+
+  .feature {
+    background: var(--bg-raised);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+  }
+
+  .feature h3 {
+    font-size: 14.5px;
+    font-weight: 700;
+    margin: 0 0 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .feature h3 svg { width: 16px; height: 16px; fill: var(--good); flex-shrink: 0; }
+
+  .feature p {
+    margin: 0;
+    font-size: 13.5px;
+    color: var(--ink-soft);
+    line-height: 1.55;
+  }
+
+  .install-steps {
+    counter-reset: step;
+    display: grid;
+    gap: 14px;
+    padding: 0;
+    margin: 0;
+    list-style: none;
+  }
+
+  .install-steps li {
+    counter-increment: step;
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    font-size: 15px;
+    color: var(--ink);
+  }
+
+  .install-steps li::before {
+    content: counter(step);
+    flex-shrink: 0;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-size: 12.5px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .install-steps code {
+    background: var(--accent-soft);
+    color: var(--accent);
+    padding: 1px 6px;
+    border-radius: 5px;
+    font-family: var(--mono);
+    font-size: 13px;
+  }
+
+  .contact-card {
+    background: var(--bg-raised);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 22px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+  .contact-card a {
+    color: var(--accent);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 15px;
+    border-bottom: 1px solid transparent;
+  }
+  .contact-card a:hover, .contact-card a:focus-visible { border-bottom-color: var(--accent); }
+  .contact-card a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 3px; }
+
+  footer {
+    margin-top: 64px;
+    padding-top: 20px;
+    border-top: 1px solid var(--line);
+    font-size: 12.5px;
+    color: var(--ink-faint);
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  footer a { color: var(--ink-faint); }
+
+  @media (max-width: 560px) {
+    h1 { font-size: 34px; }
+    .page { padding: 48px 18px 72px; }
+    .features { grid-template-columns: 1fr; }
+    .contact-card { flex-direction: column; align-items: flex-start; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="masthead">
+    <span class="mark" aria-hidden="true">
+      <svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-.99-3.29-2.5-4.03v8.05c1.51-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+    </span>
+    <div>
+      <div class="mastname">Super Volume</div>
+      <div class="masttag">Extensión para Google Chrome</div>
+    </div>
+  </div>
+
+  <div class="eyebrow">Web Audio API · GainNode</div>
+  <h1>Sube el volumen de cualquier pestaña hasta <em>600%</em></h1>
+  <p class="lede">
+    Amplifica el audio de la pestaña activa usando la Web Audio API del propio
+    navegador, sin tocar en ningún momento el volumen del sistema operativo.
+    Funciona en YouTube, Netflix, Spotify Web, Twitch y cualquier sitio con
+    video o audio.
+  </p>
+
+  <div class="cta-row">
+    <a class="btn btn--primary" href="https://github.com/alvarosiles/super-volume">
+      <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.58 2 12.25c0 4.53 2.87 8.37 6.84 9.73.5.1.68-.22.68-.49 0-.24-.01-1.04-.01-1.89-2.78.62-3.37-1.21-3.37-1.21-.46-1.18-1.11-1.5-1.11-1.5-.91-.63.07-.62.07-.62 1 .07 1.53 1.05 1.53 1.05.89 1.56 2.34 1.11 2.91.85.09-.66.35-1.11.63-1.37-2.22-.26-4.56-1.14-4.56-5.05 0-1.12.39-2.03 1.03-2.75-.1-.26-.45-1.31.1-2.73 0 0 .84-.28 2.75 1.05a9.36 9.36 0 0 1 5 0c1.91-1.33 2.75-1.05 2.75-1.05.55 1.42.2 2.47.1 2.73.64.72 1.03 1.63 1.03 2.75 0 3.92-2.34 4.79-4.57 5.04.36.32.68.94.68 1.9 0 1.37-.01 2.48-.01 2.81 0 .27.18.6.69.49A10.02 10.02 0 0 0 22 12.25C22 6.58 17.52 2 12 2Z"/></svg>
+      Ver en GitHub
+    </a>
+    <a class="btn btn--ghost" href="privacy.html">
+      Política de privacidad
+      <svg viewBox="0 0 24 24"><path d="M9.29 6.71 14.59 12l-5.3 5.29 1.42 1.42L17.41 12 10.71 5.29z"/></svg>
+    </a>
+  </div>
+
+  <section>
+    <h2 class="section-title">Qué hace</h2>
+    <div class="features">
+      <div class="feature">
+        <h3><svg viewBox="0 0 24 24"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg>Hasta 600% de volumen</h3>
+        <p>Slider animado de 0% a 600%, con el porcentaje visible en tiempo real.</p>
+      </div>
+      <div class="feature">
+        <h3><svg viewBox="0 0 24 24"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg>Recuerda por sitio</h3>
+        <p>Guarda el volumen preferido por dominio y lo reaplica automáticamente.</p>
+      </div>
+      <div class="feature">
+        <h3><svg viewBox="0 0 24 24"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg>Reset y Mute</h3>
+        <p>Un clic para volver a 100% o silenciar sin perder tu ajuste guardado.</p>
+      </div>
+      <div class="feature">
+        <h3><svg viewBox="0 0 24 24"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg>100% local</h3>
+        <p>Sin llamadas de red, sin cuentas, sin analítica. Todo ocurre en tu navegador.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="section-title">Instalación en modo desarrollador</h2>
+    <ol class="install-steps">
+      <li>Descargá o cloná el repositorio desde <code>github.com/alvarosiles/super-volume</code>.</li>
+      <li>Abrí Chrome y andá a <code>chrome://extensions</code>.</li>
+      <li>Activá el <strong>Modo desarrollador</strong> (interruptor arriba a la derecha).</li>
+      <li>Hacé clic en <strong>Cargar descomprimida</strong> y seleccioná la carpeta del proyecto.</li>
+    </ol>
+  </section>
+
+  <div class="contact-card">
+    <div>
+      <div style="font-size:14px; color:var(--ink-soft); margin-bottom:4px;">¿Preguntas o soporte?</div>
+      <div style="font-size:15px;">Escribinos directamente.</div>
+    </div>
+    <a href="mailto:servisofts.srl@gmail.com">servisofts.srl@gmail.com</a>
+  </div>
+
+  <footer>
+    <span>Super Volume — Alvaro Siles</span>
+    <span><a href="privacy.html">Privacidad</a> · <a href="https://github.com/alvarosiles/super-volume">GitHub</a></span>
+  </footer>
+
+</div>
+</body>
+</html>
