@@ -41,6 +41,27 @@ fi
 VERSION="$(python3 -c "import json; print(json.load(open('$MANIFEST'))['version'])")"
 echo "Versión detectada: $VERSION"
 
+# La Chrome Web Store rechaza el .zip si "description" supera 132
+# caracteres — validarlo acá evita descubrirlo recién al subir el archivo.
+DESC_LEN="$(python3 -c "import json; print(len(json.load(open('$MANIFEST')).get('description','')))")"
+if [[ "$DESC_LEN" -gt 132 ]]; then
+  echo "manifest.json: 'description' tiene $DESC_LEN caracteres (máx. 132 para la Chrome Web Store)." >&2
+  exit 1
+fi
+
+# Nombrar marcas de plataformas de terceros en textos/capturas de la ficha
+# fue justo lo que causó el rechazo por "Spam con palabras clave" (Yellow
+# Argon) — se busca en manifest.json y en todo lo que sirve de fuente para
+# pegar en el Dashboard (store-assets/, README.md, docs/).
+BRAND_PATTERN='\bYouTube\b|\bNetflix\b|\bTwitch\b|\bSpotify\b|\bTikTok\b|\bVimeo\b|\bFacebook\b|\bInstagram\b|\bDisney\+|\bAmazon Prime\b|\bHBO\b|\bHulu\b'
+BRAND_HITS="$(grep -rniE "$BRAND_PATTERN" "$MANIFEST" store-assets/ README.md docs/ 2>/dev/null || true)"
+if [[ -n "$BRAND_HITS" ]]; then
+  echo "Se encontraron nombres de plataformas de terceros (posible 'Spam con palabras clave'):" >&2
+  echo "$BRAND_HITS" >&2
+  echo "Quitalos o generalizalos (ej: 'plataformas con protección DRM') antes de compilar." >&2
+  exit 1
+fi
+
 # ── 2. Archivos que forman parte del paquete final ─────────────────────────
 FILES=(
   manifest.json

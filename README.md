@@ -1,13 +1,12 @@
 # 🔊 Super Volume
-<!-- https://claude.ai/code/artifact/9396f99c-1b3e-493b-9532-e70f81f988b5?via=auto_preview -->
+
 Extensión para **Google Chrome** (Manifest V3) que permite aumentar el volumen
 de la pestaña activa hasta **600%** usando la **Web Audio API** (`AudioContext`
 + `GainNode`), sin tocar en ningún momento el volumen del sistema operativo.
 
 Diseño oscuro inspirado en las apps de Google, slider animado, recuerda el
 volumen por dominio y funciona automáticamente en cualquier página con
-elementos `<video>` o `<audio>` (YouTube, Netflix, Twitch, Spotify Web,
-Facebook Videos, Vimeo, TikTok, etc.).
+elementos `<video>` o `<audio>`.
 
 - **Autor:** [alvarosiles](https://github.com/alvarosiles)
 - **Contacto:** alvarosiles.developer@gmail.com
@@ -38,14 +37,13 @@ Facebook Videos, Vimeo, TikTok, etc.).
 - Porcentaje actual visible en tiempo real.
 - Botón **Reset** (vuelve a 100%).
 - Botón **Mute** / Unmute.
-- **Recuerda el volumen por dominio** (ej: `youtube.com → 250%`,
-  `spotify.com → 180%`, `netflix.com → 300%`), con un interruptor para
-  activar/desactivar ese comportamiento.
+- **Recuerda el volumen por dominio** (ej: un sitio a 250%, otro a 180%),
+  con un interruptor para activar/desactivar ese comportamiento.
 - El volumen guardado se re-aplica automáticamente al volver a visitar el
   sitio, sin necesidad de abrir el popup.
 - Solo afecta a la **pestaña activa**.
 - Detecta automáticamente elementos `<video>` y `<audio>`, incluidos los
-  que aparecen dinámicamente en sitios SPA (YouTube, Netflix, TikTok…).
+  que aparecen dinámicamente en sitios de una sola página (SPA).
 - Muestra el **favicon**, el **título** y el **dominio** de la pestaña actual.
 - Indicador (badge) en el icono de la extensión con el % activo del sitio.
 - Tema oscuro estilo Google, esquinas redondeadas, transiciones suaves,
@@ -142,7 +140,7 @@ Hay tres scripts listos para usar (`chmod +x` ya aplicado):
                                #    en un perfil de pruebas aislado en /tmp
                                #    (no toca tu perfil ni tus sesiones reales).
                                #    Acepta una URL opcional:
-                               #    ./scripts/2-test-extension.sh https://youtube.com/...
+                               #    ./scripts/2-test-extension.sh https://ejemplo.com/video
 
 ./scripts/3-build.sh          # 3. Valida manifest.json + sintaxis JS y genera
                                #    dist/super-volume-v<version>.zip listo para
