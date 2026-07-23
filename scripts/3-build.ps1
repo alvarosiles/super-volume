@@ -34,6 +34,52 @@ try {
 $Version = $ManifestObj.version
 Write-Output "Versión detectada: $Version"
 
+# La Chrome Web Store rechaza el .zip si "description" supera 132
+# caracteres -- validarlo acá evita descubrirlo recién al subir el archivo.
+# Si "description" usa un placeholder __MSG_x__ (i18n), la longitud real la
+# valida cada messages.json más abajo.
+if ($ManifestObj.description -and $ManifestObj.description -notmatch '^__MSG_.+__$' -and $ManifestObj.description.Length -gt 132) {
+    Write-Error "manifest.json: 'description' tiene $($ManifestObj.description.Length) caracteres (máx. 132 para la Chrome Web Store)."
+}
+
+# Nombrar marcas de plataformas de terceros en textos/capturas de la ficha
+# fue justo lo que causó el rechazo por "Spam con palabras clave" (Yellow
+# Argon) en otro proyecto -- se busca en manifest.json y en todo lo que sirve
+# de fuente para pegar en el Dashboard (store-assets/, README.md, docs/, _locales/).
+$BrandPattern = '\bYouTube\b|\bNetflix\b|\bTwitch\b|\bSpotify\b|\bTikTok\b|\bVimeo\b|\bFacebook\b|\bInstagram\b|\bDisney\+|\bAmazon Prime\b|\bHBO\b|\bHulu\b'
+$BrandTargets = @($Manifest, 'README.md') + (Get-ChildItem -Recurse -File -Include *.md,*.html,*.json store-assets, docs, _locales -ErrorAction SilentlyContinue).FullName
+$BrandHits = Select-String -Path $BrandTargets -Pattern $BrandPattern -ErrorAction SilentlyContinue
+if ($BrandHits) {
+    Write-Output "Se encontraron nombres de plataformas de terceros (posible 'Spam con palabras clave'):"
+    $BrandHits | ForEach-Object { Write-Output "  $($_.Path):$($_.LineNumber): $($_.Line.Trim())" }
+    Write-Error "Quitalos o generalizalos (ej: 'plataformas con protección DRM') antes de compilar."
+}
+
+# ── 1b. Validar los archivos de idioma (_locales) referenciados por manifest ──
+if ($ManifestObj.default_locale) {
+    foreach ($lang in @('en', 'es')) {
+        $MsgPath = Join-Path $RootDir "_locales/$lang/messages.json"
+        if (-not (Test-Path $MsgPath)) {
+            Write-Error "Falta _locales/$lang/messages.json (declarado via default_locale/__MSG_ en manifest.json)."
+        }
+        try {
+            $Messages = Get-Content $MsgPath -Raw | ConvertFrom-Json
+        } catch {
+            Write-Error "_locales/$lang/messages.json no es JSON válido."
+        }
+        # Cualquier campo del manifest con forma __MSG_key__ debe existir como key en cada idioma.
+        foreach ($field in @($ManifestObj.name, $ManifestObj.short_name, $ManifestObj.description)) {
+            if ($field -match '^__MSG_(.+)__$') {
+                $key = $Matches[1]
+                if (-not ($Messages.PSObject.Properties.Name -contains $key)) {
+                    Write-Error "_locales/$lang/messages.json no tiene la key '$key' que usa manifest.json (__MSG_${key}__)."
+                }
+            }
+        }
+    }
+    Write-Output "Archivos _locales/*/messages.json OK"
+}
+
 # ── 2. Archivos que forman parte del paquete final ──────────────────────
 $Files = @(
     'manifest.json',
@@ -45,7 +91,9 @@ $Files = @(
     'icons/icon16.png',
     'icons/icon32.png',
     'icons/icon48.png',
-    'icons/icon128.png'
+    'icons/icon128.png',
+    '_locales/en/messages.json',
+    '_locales/es/messages.json'
 )
 
 $Missing = $false

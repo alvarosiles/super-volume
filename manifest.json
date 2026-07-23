@@ -3,7 +3,7 @@
   "default_locale": "es",
   "name": "__MSG_extName__",
   "short_name": "__MSG_extShortName__",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "__MSG_extDescription__",
   "author": "alvarosiles",
   "homepage_url": "https://github.com/alvarosiles/super-volume",

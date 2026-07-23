@@ -163,7 +163,7 @@ Resumen rápido:
 
 ```bash
 ./scripts/3-build.sh
-# → dist/super-volume-v1.0.0.zip
+# → dist/super-volume-v2.0.0.zip
 ```
 
 Sube ese `.zip` en el

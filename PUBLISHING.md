@@ -10,7 +10,7 @@ extensión necesita en tiempo de ejecución):
 
 ```bash
 ./scripts/3-build.sh
-# → dist/super-volume-v1.0.0.zip
+# → dist/super-volume-v2.0.0.zip
 ```
 
 Vuelve a correrlo cada vez que cambies el código, antes de subir una nueva
@@ -19,7 +19,7 @@ versión.
 ## 1. Subir el paquete
 
 Clic en **"+ Nuevo elemento"** (arriba a la derecha) → arrastra o selecciona
-`dist/super-volume-v1.0.0.zip`.
+`dist/super-volume-v2.0.0.zip`.
 
 ## 2. Completar la ficha del Store
 
@@ -49,9 +49,14 @@ Como el manifest pide `host_permissions: ["<all_urls>"]`, la pestaña
   Audio API").
 - **Política de privacidad (Privacy Policy)**: Google la exige casi siempre
   que hay `host_permissions` amplios, aunque la extensión no recolecte ni
-  envíe datos a ningún servidor. Necesitas una URL pública con ese texto
-  (puede ser una página simple) aclarando que todo el procesamiento es
-  local y no se recopila ni transmite ningún dato.
+  envíe datos a ningún servidor. Ya está escrita en `docs/privacy.html`;
+  falta que quede publicada y accesible por URL pública (ver nota abajo)
+  para pegarla en este campo del Dashboard.
+
+  > **Importante**: `docs/` solo existe en la rama `dev` por ahora. Si
+  > publicás la política vía GitHub Pages (sirviendo `main` + carpeta
+  > `/docs`, la configuración típica), primero tenés que mergear `dev` a
+  > `main` y pushear — si no, la URL da 404 y Google rechaza el listing.
 
 ## 4. Cuenta de desarrollador
 

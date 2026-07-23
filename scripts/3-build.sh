@@ -32,29 +32,77 @@ if [[ ! -f "$MANIFEST" ]]; then
   exit 1
 fi
 
-# ── 1. Validar manifest.json ──────────────────────────────────────────────
-if ! python3 -c "import json,sys; json.load(open(sys.argv[1]))" "$MANIFEST" 2>/dev/null; then
-  echo "manifest.json no es un JSON válido. Corrígelo antes de compilar." >&2
+if ! command -v node >/dev/null 2>&1; then
+  echo "Se necesita Node.js para validar manifest.json/_locales (no se encontró en PATH)." >&2
   exit 1
 fi
 
-VERSION="$(python3 -c "import json; print(json.load(open('$MANIFEST'))['version'])")"
+# ── 1. Validar manifest.json (y _locales/, si usa i18n) con Node ──────────
+# Nota: se usa Node en vez de python3 porque en Windows "python3" suele ser
+# solo el alias-stub de Microsoft Store (no un intérprete real). Los logs de
+# validación van a stderr; stdout imprime únicamente la versión.
+VERSION="$(node -e "
+const fs = require('fs');
+const path = require('path');
+const manifestPath = process.argv[1];
+const rootDir = process.argv[2];
+
+let manifest;
+try {
+  manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+} catch (err) {
+  console.error('manifest.json no es un JSON válido. Corrígelo antes de compilar.');
+  console.error(err.message);
+  process.exit(1);
+}
+
+const desc = manifest.description || '';
+if (!/^__MSG_.+__\$/.test(desc) && desc.length > 132) {
+  console.error(\`manifest.json: 'description' tiene \${desc.length} caracteres (máx. 132 para la Chrome Web Store).\`);
+  process.exit(1);
+}
+
+if (manifest.default_locale) {
+  const fields = [manifest.name, manifest.short_name, manifest.description];
+  for (const lang of ['en', 'es']) {
+    const msgPath = path.join(rootDir, '_locales', lang, 'messages.json');
+    if (!fs.existsSync(msgPath)) {
+      console.error(\`Falta _locales/\${lang}/messages.json (declarado vía default_locale/__MSG_ en manifest.json).\`);
+      process.exit(1);
+    }
+    let messages;
+    try {
+      messages = JSON.parse(fs.readFileSync(msgPath, 'utf8'));
+    } catch (err) {
+      console.error(\`_locales/\${lang}/messages.json no es JSON válido.\`);
+      process.exit(1);
+    }
+    for (const field of fields) {
+      const m = /^__MSG_(.+)__\$/.exec(field || '');
+      if (m && !(m[1] in messages)) {
+        console.error(\`_locales/\${lang}/messages.json no tiene la key '\${m[1]}' que usa manifest.json (__MSG_\${m[1]}__).\`);
+        process.exit(1);
+      }
+    }
+  }
+  console.error('Archivos _locales/*/messages.json OK');
+}
+
+console.log(manifest.version);
+" "$MANIFEST" "$ROOT_DIR")" || exit 1
+
+if [[ -z "$VERSION" ]]; then
+  echo "No se pudo determinar la versión desde manifest.json." >&2
+  exit 1
+fi
 echo "Versión detectada: $VERSION"
-
-# La Chrome Web Store rechaza el .zip si "description" supera 132
-# caracteres — validarlo acá evita descubrirlo recién al subir el archivo.
-DESC_LEN="$(python3 -c "import json; print(len(json.load(open('$MANIFEST')).get('description','')))")"
-if [[ "$DESC_LEN" -gt 132 ]]; then
-  echo "manifest.json: 'description' tiene $DESC_LEN caracteres (máx. 132 para la Chrome Web Store)." >&2
-  exit 1
-fi
 
 # Nombrar marcas de plataformas de terceros en textos/capturas de la ficha
 # fue justo lo que causó el rechazo por "Spam con palabras clave" (Yellow
 # Argon) — se busca en manifest.json y en todo lo que sirve de fuente para
 # pegar en el Dashboard (store-assets/, README.md, docs/).
 BRAND_PATTERN='\bYouTube\b|\bNetflix\b|\bTwitch\b|\bSpotify\b|\bTikTok\b|\bVimeo\b|\bFacebook\b|\bInstagram\b|\bDisney\+|\bAmazon Prime\b|\bHBO\b|\bHulu\b'
-BRAND_HITS="$(grep -rniE "$BRAND_PATTERN" "$MANIFEST" store-assets/ README.md docs/ 2>/dev/null || true)"
+BRAND_HITS="$(grep -rniE "$BRAND_PATTERN" "$MANIFEST" store-assets/ README.md docs/ _locales/ 2>/dev/null || true)"
 if [[ -n "$BRAND_HITS" ]]; then
   echo "Se encontraron nombres de plataformas de terceros (posible 'Spam con palabras clave'):" >&2
   echo "$BRAND_HITS" >&2
@@ -74,6 +122,8 @@ FILES=(
   icons/icon32.png
   icons/icon48.png
   icons/icon128.png
+  _locales/en/messages.json
+  _locales/es/messages.json
 )
 
 MISSING=0
