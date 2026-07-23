@@ -1,0 +1,69 @@
+{
+  "extName": { "message": "Super Volume" },
+  "extShortName": { "message": "Super Volume" },
+  "extDescription": {
+    "message": "Aumenta el volumen de cualquier pestaña hasta 600% usando Web Audio API (GainNode), sin tocar el volumen del sistema operativo."
+  },
+
+  "themeLabelAuto": { "message": "Automático (según el sistema)" },
+  "themeLabelLight": { "message": "Claro" },
+  "themeLabelDark": { "message": "Oscuro" },
+  "themeAriaLabel": {
+    "message": "Tema: $NAME$ (clic para cambiar)",
+    "placeholders": { "name": { "content": "$1" } }
+  },
+  "themeTitle": {
+    "message": "Tema: $NAME$",
+    "placeholders": { "name": { "content": "$1" } }
+  },
+
+  "langLabelAuto": { "message": "Automático (navegador)" },
+  "langLabelEn": { "message": "English" },
+  "langLabelEs": { "message": "Español" },
+  "langAriaLabel": {
+    "message": "Idioma: $NAME$ (clic para cambiar)",
+    "placeholders": { "name": { "content": "$1" } }
+  },
+  "langTitle": {
+    "message": "Idioma: $NAME$",
+    "placeholders": { "name": { "content": "$1" } }
+  },
+
+  "siteLoading": { "message": "Cargando…" },
+  "siteSpecialPage": { "message": "Página especial del navegador" },
+  "siteUntitledTab": { "message": "Pestaña sin título" },
+  "badgeNoAudio": { "message": "Sin audio" },
+  "badgeNotAvailable": { "message": "No disponible aquí" },
+
+  "volumeLabel": { "message": "Volumen" },
+  "volumeSliderAria": { "message": "Nivel de volumen" },
+
+  "btnReset": { "message": "Reset" },
+  "btnMute": { "message": "Mute" },
+  "btnUnmute": { "message": "Unmute" },
+
+  "eqCardLabel": { "message": "Ecualizador" },
+  "eqGroupAria": { "message": "Preset de ecualizador" },
+  "eqPresetNone": { "message": "Ninguno" },
+  "eqPresetCine": { "message": "Cine" },
+  "eqPresetMusica": { "message": "Música" },
+  "eqPresetJuegos": { "message": "Juegos" },
+
+  "voiceBoostLabel": { "message": "Voice Boost" },
+  "bassBoostLabel": { "message": "Bass Boost" },
+  "rememberLabel": { "message": "Recordar volumen por sitio" },
+
+  "statusVolumeReset": { "message": "Volumen restablecido a 100%" },
+  "statusNoAudioPage": { "message": "Esta página no permite ajustar el audio." },
+  "statusRememberOn": { "message": "Se recordará el volumen de este sitio" },
+  "statusRememberOff": { "message": "Ya no se recordará el volumen" },
+  "statusVoiceBoostOn": { "message": "Voice Boost activado" },
+  "statusVoiceBoostOff": { "message": "Voice Boost desactivado" },
+  "statusBassBoostOn": { "message": "Bass Boost activado" },
+  "statusBassBoostOff": { "message": "Bass Boost desactivado" },
+  "statusEqOff": { "message": "Ecualizador desactivado" },
+  "statusEqOn": {
+    "message": "Ecualizador: $NAME$",
+    "placeholders": { "name": { "content": "$1" } }
+  }
+}

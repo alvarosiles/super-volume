@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Super Volume</title>
+  <!-- No se cargan fuentes ni recursos externos: cumple CSP de Manifest V3
+       y evita dependencias de red (los iconos van embebidos como SVG). -->
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <div class="app">
+
+    <!-- ── Encabezado ─────────────────────────────────────────────── -->
+    <header class="app__header">
+      <div class="app__brand">
+        <span class="icon icon--brand" aria-hidden="true">
+          <svg viewBox="0 0 24 24" focusable="false">
+            <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-.99-3.29-2.5-4.03v8.05c1.51-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+          </svg>
+        </span>
+        <h1 class="app__title">Super Volume</h1>
+      </div>
+      <div class="app__header-actions">
+        <button id="langToggle" class="icon-btn icon-btn--text" type="button">
+          <span class="lang-toggle-label">A</span>
+        </button>
+        <button id="themeToggle" class="icon-btn" type="button">
+          <svg viewBox="0 0 24 24" class="icon icon--theme-auto" focusable="false" aria-hidden="true">
+            <path d="M12 2a10 10 0 100 20 10 10 0 000-20zm0 2v16a8 8 0 010-16z"/>
+          </svg>
+          <svg viewBox="0 0 24 24" class="icon icon--theme-light hidden" focusable="false" aria-hidden="true">
+            <path d="M12 7a5 5 0 100 10 5 5 0 000-10zM2 13h2v-2H2v2zm18 0h2v-2h-2v2zm-9-9h2V2h-2v2zm0 18h2v-2h-2v2zM4.22 5.64l1.42 1.42 1.41-1.41-1.42-1.42-1.41 1.41zm14.14 14.14l1.41-1.41-1.42-1.42-1.41 1.42 1.42 1.41zM4.22 18.36l1.41 1.41 1.42-1.41-1.42-1.42-1.41 1.42zM19.78 5.64l-1.41-1.41-1.42 1.41 1.42 1.42 1.41-1.42z"/>
+          </svg>
+          <svg viewBox="0 0 24 24" class="icon icon--theme-dark hidden" focusable="false" aria-hidden="true">
+            <path d="M12.3 3a9 9 0 109.4 12.9A9 9 0 0112.3 3z"/>
+          </svg>
+        </button>
+        <span class="app__version">v2.0.0</span>
+      </div>
+    </header>
+
+    <!-- ── Tarjeta del sitio actual ───────────────────────────────── -->
+    <section class="card site-card" id="siteCard">
+      <img id="siteFavicon" class="site-card__favicon" alt="" width="28" height="28" />
+      <div class="site-card__info">
+        <p id="siteTitle" class="site-card__title">Cargando…</p>
+        <p id="siteDomain" class="site-card__domain">—</p>
+      </div>
+      <span id="noMediaBadge" class="badge badge--warning hidden">Sin audio</span>
+    </section>
+
+    <!-- ── Tarjeta de volumen ─────────────────────────────────────── -->
+    <section class="card volume-card">
+      <div class="volume-card__row">
+        <label for="volumeSlider" class="volume-card__label" data-i18n="volumeLabel">Volumen</label>
+        <span id="volumeValue" class="volume-card__value">100%</span>
+      </div>
+
+      <input
+        type="range"
+        id="volumeSlider"
+        class="slider"
+        min="0"
+        max="600"
+        step="5"
+        value="100"
+        aria-label="Nivel de volumen"
+        data-i18n-aria-label="volumeSliderAria"
+      />
+
+      <div class="volume-card__scale" aria-hidden="true">
+        <span>0%</span>
+        <span>100%</span>
+        <span>300%</span>
+        <span>600%</span>
+      </div>
+    </section>
+
+    <!-- ── Botones de acción ──────────────────────────────────────── -->
+    <section class="actions">
+      <button id="resetBtn" class="btn btn--secondary" type="button">
+        <svg viewBox="0 0 24 24" class="icon" focusable="false" aria-hidden="true">
+          <path d="M12 5V2L8 6l4 4V7c3.31 0 6 2.69 6 6 0 2.97-2.16 5.44-5 5.92v2.02c3.95-.49 7-3.85 7-7.94 0-4.42-3.58-8-8-8zm-6 8c0-1.65.67-3.15 1.76-4.24L6.34 7.34C4.9 8.79 4 10.79 4 13c0 4.08 3.05 7.44 7 7.93v-2.02c-2.84-.48-5-2.94-5-5.91z"/>
+        </svg>
+        <span data-i18n="btnReset">Reset</span>
+      </button>
+      <button id="muteBtn" class="btn btn--secondary" type="button" aria-pressed="false">
+        <svg viewBox="0 0 24 24" class="icon icon--unmuted" focusable="false" aria-hidden="true">
+          <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-.99-3.29-2.5-4.03v8.05c1.51-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+        </svg>
+        <svg viewBox="0 0 24 24" class="icon icon--muted hidden" focusable="false" aria-hidden="true">
+          <path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/>
+        </svg>
+        <span id="muteLabel" data-i18n="btnMute">Mute</span>
+      </button>
+    </section>
+
+    <!-- ── Ecualizador ────────────────────────────────────────────── -->
+    <section class="card eq-card">
+      <p class="eq-card__label" data-i18n="eqCardLabel">Ecualizador</p>
+      <div class="eq-presets" role="group" aria-label="Preset de ecualizador" data-i18n-aria-label="eqGroupAria">
+        <button class="eq-preset" type="button" data-preset="none" aria-pressed="true" data-i18n="eqPresetNone">Ninguno</button>
+        <button class="eq-preset" type="button" data-preset="cine" aria-pressed="false" data-i18n="eqPresetCine">Cine</button>
+        <button class="eq-preset" type="button" data-preset="musica" aria-pressed="false" data-i18n="eqPresetMusica">Música</button>
+        <button class="eq-preset" type="button" data-preset="juegos" aria-pressed="false" data-i18n="eqPresetJuegos">Juegos</button>
+      </div>
+      <label class="switch-row eq-card__boost-row" for="voiceBoostToggle">
+        <span data-i18n="voiceBoostLabel">Voice Boost</span>
+        <span class="switch">
+          <input type="checkbox" id="voiceBoostToggle" />
+          <span class="switch__track"><span class="switch__thumb"></span></span>
+        </span>
+      </label>
+      <label class="switch-row" for="bassBoostToggle">
+        <span data-i18n="bassBoostLabel">Bass Boost</span>
+        <span class="switch">
+          <input type="checkbox" id="bassBoostToggle" />
+          <span class="switch__track"><span class="switch__thumb"></span></span>
+        </span>
+      </label>
+    </section>
+
+    <!-- ── Ajustes ────────────────────────────────────────────────── -->
+    <section class="card settings-card">
+      <label class="switch-row" for="rememberToggle">
+        <span data-i18n="rememberLabel">Recordar volumen por sitio</span>
+        <span class="switch">
+          <input type="checkbox" id="rememberToggle" />
+          <span class="switch__track"><span class="switch__thumb"></span></span>
+        </span>
+      </label>
+    </section>
+
+    <footer class="app__footer">
+      <span id="statusMessage" class="app__status"></span>
+    </footer>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

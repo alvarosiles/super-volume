@@ -1,0 +1,69 @@
+{
+  "extName": { "message": "Super Volume" },
+  "extShortName": { "message": "Super Volume" },
+  "extDescription": {
+    "message": "Boost the volume of any tab up to 600% using the Web Audio API (GainNode), without touching your system volume."
+  },
+
+  "themeLabelAuto": { "message": "Automatic (system)" },
+  "themeLabelLight": { "message": "Light" },
+  "themeLabelDark": { "message": "Dark" },
+  "themeAriaLabel": {
+    "message": "Theme: $NAME$ (click to change)",
+    "placeholders": { "name": { "content": "$1" } }
+  },
+  "themeTitle": {
+    "message": "Theme: $NAME$",
+    "placeholders": { "name": { "content": "$1" } }
+  },
+
+  "langLabelAuto": { "message": "Automatic (browser)" },
+  "langLabelEn": { "message": "English" },
+  "langLabelEs": { "message": "Español" },
+  "langAriaLabel": {
+    "message": "Language: $NAME$ (click to change)",
+    "placeholders": { "name": { "content": "$1" } }
+  },
+  "langTitle": {
+    "message": "Language: $NAME$",
+    "placeholders": { "name": { "content": "$1" } }
+  },
+
+  "siteLoading": { "message": "Loading…" },
+  "siteSpecialPage": { "message": "Special browser page" },
+  "siteUntitledTab": { "message": "Untitled tab" },
+  "badgeNoAudio": { "message": "No audio" },
+  "badgeNotAvailable": { "message": "Not available here" },
+
+  "volumeLabel": { "message": "Volume" },
+  "volumeSliderAria": { "message": "Volume level" },
+
+  "btnReset": { "message": "Reset" },
+  "btnMute": { "message": "Mute" },
+  "btnUnmute": { "message": "Unmute" },
+
+  "eqCardLabel": { "message": "Equalizer" },
+  "eqGroupAria": { "message": "Equalizer preset" },
+  "eqPresetNone": { "message": "None" },
+  "eqPresetCine": { "message": "Cinema" },
+  "eqPresetMusica": { "message": "Music" },
+  "eqPresetJuegos": { "message": "Games" },
+
+  "voiceBoostLabel": { "message": "Voice Boost" },
+  "bassBoostLabel": { "message": "Bass Boost" },
+  "rememberLabel": { "message": "Remember volume per site" },
+
+  "statusVolumeReset": { "message": "Volume reset to 100%" },
+  "statusNoAudioPage": { "message": "This page doesn't allow adjusting audio." },
+  "statusRememberOn": { "message": "This site's volume will be remembered" },
+  "statusRememberOff": { "message": "This site's volume will no longer be remembered" },
+  "statusVoiceBoostOn": { "message": "Voice Boost enabled" },
+  "statusVoiceBoostOff": { "message": "Voice Boost disabled" },
+  "statusBassBoostOn": { "message": "Bass Boost enabled" },
+  "statusBassBoostOff": { "message": "Bass Boost disabled" },
+  "statusEqOff": { "message": "Equalizer disabled" },
+  "statusEqOn": {
+    "message": "Equalizer: $NAME$",
+    "placeholders": { "name": { "content": "$1" } }
+  }
+}
