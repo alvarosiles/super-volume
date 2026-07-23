@@ -1,9 +1,10 @@
 {
   "manifest_version": 3,
-  "name": "Super Volume",
-  "short_name": "Super Volume",
+  "default_locale": "es",
+  "name": "__MSG_extName__",
+  "short_name": "__MSG_extShortName__",
   "version": "1.0.0",
-  "description": "Aumenta el volumen de cualquier pestaña hasta 600% usando Web Audio API (GainNode), sin tocar el volumen del sistema operativo.",
+  "description": "__MSG_extDescription__",
   "author": "alvarosiles",
   "homepage_url": "https://github.com/alvarosiles/super-volume",
 

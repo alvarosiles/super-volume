@@ -34,12 +34,34 @@ for bin in google-chrome google-chrome-stable chromium chromium-browser microsof
 done
 
 if [[ -z "$BROWSER" ]]; then
+  # Windows (Git Bash/MSYS): los binarios no viven en el PATH con esos
+  # nombres de Linux, hay que buscarlos en sus rutas típicas de instalación.
+  for win_path in \
+    "/c/Program Files/Google/Chrome/Application/chrome.exe" \
+    "/c/Program Files (x86)/Google/Chrome/Application/chrome.exe" \
+    "/c/Program Files/Microsoft/Edge/Application/msedge.exe" \
+    "/c/Program Files (x86)/Microsoft/Edge/Application/msedge.exe"; do
+    if [[ -f "$win_path" ]]; then
+      BROWSER="$win_path"
+      break
+    fi
+  done
+fi
+
+if [[ -z "$BROWSER" ]]; then
   echo "No se encontró Chrome/Chromium/Edge instalado en el sistema." >&2
   exit 1
 fi
 
-if ! command -v python3 >/dev/null 2>&1; then
-  echo "Se necesita python3 para automatizar la carga (no se encontró en PATH)." >&2
+LOADER_CMD=()
+if command -v node >/dev/null 2>&1; then
+  LOADER_CMD=(node "$(dirname "${BASH_SOURCE[0]}")/_cdp_loader.js")
+elif command -v python3 >/dev/null 2>&1; then
+  LOADER_CMD=(python3 "$(dirname "${BASH_SOURCE[0]}")/_cdp_loader.py")
+fi
+
+if [[ ${#LOADER_CMD[@]} -eq 0 ]]; then
+  echo "Se necesita Node.js o Python 3 para automatizar la carga (no se encontró ninguno en PATH)." >&2
   exit 1
 fi
 
@@ -71,7 +93,7 @@ disown
 
 echo "Chrome abriéndose... activando Developer mode e instalando la extensión..."
 
-if python3 "$(dirname "${BASH_SOURCE[0]}")/_cdp_loader.py" "$PORT" "$ROOT_DIR" "$URL"; then
+if "${LOADER_CMD[@]}" "$PORT" "$ROOT_DIR" "$URL"; then
   echo
   echo "Listo. Super Volume está instalada y activa en esta ventana de Chrome."
   echo "Abre el popup (icono de la barra de extensiones) sobre la pestaña de YouTube y mueve el slider."

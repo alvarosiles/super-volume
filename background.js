@@ -16,7 +16,7 @@
  */
 
 const DEFAULT_SETTINGS = {
-  rememberEnabled: true,
+  rememberEnabled: false,
   volumes: {}, // { "youtube.com": 250, "spotify.com": 180, ... }
 };
 
@@ -55,7 +55,7 @@ function refreshBadgeForTab(tabId, url) {
   chrome.storage.local.get(['rememberEnabled', 'volumes'], (data) => {
     if (chrome.runtime.lastError) return;
 
-    const rememberEnabled = data.rememberEnabled !== false;
+    const rememberEnabled = data.rememberEnabled === true;
     const volumes = data.volumes || {};
     const saved = volumes[domain];
 

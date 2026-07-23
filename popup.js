@@ -34,20 +34,143 @@
     iconUnmuted: document.querySelector('.icon--unmuted'),
     iconMuted: document.querySelector('.icon--muted'),
     rememberToggle: document.getElementById('rememberToggle'),
+    eqPresetButtons: Array.from(document.querySelectorAll('.eq-preset')),
+    voiceBoostToggle: document.getElementById('voiceBoostToggle'),
+    bassBoostToggle: document.getElementById('bassBoostToggle'),
     status: document.getElementById('statusMessage'),
     siteCard: document.getElementById('siteCard'),
+    themeToggle: document.getElementById('themeToggle'),
+    themeIconAuto: document.querySelector('.icon--theme-auto'),
+    themeIconLight: document.querySelector('.icon--theme-light'),
+    themeIconDark: document.querySelector('.icon--theme-dark'),
+    langToggle: document.getElementById('langToggle'),
+    langToggleLabel: document.querySelector('.lang-toggle-label'),
   };
 
   // Estado local del popup para esta apertura.
   const local = {
     tabId: null,
     domain: '',
-    rememberEnabled: true,
+    rememberEnabled: false,
     muted: false,
     volumeBeforeMute: 100,
     saveTimer: null,
     contentScriptAvailable: true,
+    theme: 'auto',
+    eqPreset: 'none',
+    language: 'auto',
+    tabInfoLoaded: false,
+    tabTitleRaw: '',
+    noContentScript: false,
   };
+
+  const THEME_ORDER = ['auto', 'light', 'dark'];
+  const THEME_LABEL_KEYS = { auto: 'themeLabelAuto', light: 'themeLabelLight', dark: 'themeLabelDark' };
+  const EQ_LABEL_KEYS = { none: 'eqPresetNone', cine: 'eqPresetCine', musica: 'eqPresetMusica', juegos: 'eqPresetJuegos' };
+
+  const LANG_ORDER = ['auto', 'en', 'es'];
+  const LANG_LABEL_KEYS = { auto: 'langLabelAuto', en: 'langLabelEn', es: 'langLabelEs' };
+  const LANG_BUTTON_TEXT = { auto: 'A', en: 'EN', es: 'ES' };
+
+  // Mensajes del idioma forzado (en/es), cargados desde _locales/<lang>/messages.json
+  // cuando el usuario elige un idioma explícito en vez de "Automático". chrome.i18n
+  // solo sabe seguir el idioma del navegador, así que para poder forzarlo leemos
+  // directamente el mismo JSON que usa Chrome, sin duplicar los textos.
+  let overrideMessages = null;
+
+  async function loadOverrideMessages(lang) {
+    if (lang === 'auto') {
+      overrideMessages = null;
+      return;
+    }
+    try {
+      const res = await fetch(chrome.runtime.getURL(`_locales/${lang}/messages.json`));
+      overrideMessages = await res.json();
+    } catch (_err) {
+      overrideMessages = null; // si falla, seguimos con chrome.i18n como respaldo
+    }
+  }
+
+  /** Atajo de traducción: usa el idioma forzado si hay uno, si no el del navegador (chrome.i18n). */
+  function t(key, substitutions) {
+    const entry = overrideMessages && overrideMessages[key];
+    if (entry) {
+      const subs = substitutions == null ? [] : [].concat(substitutions);
+      let msg = entry.message;
+      if (entry.placeholders) {
+        for (const [name, def] of Object.entries(entry.placeholders)) {
+          const idx = Number(String(def.content).replace('$', '')) - 1;
+          msg = msg.replace(new RegExp(`\\$${name}\\$`, 'gi'), subs[idx] != null ? subs[idx] : '');
+        }
+      }
+      return msg;
+    }
+    return chrome.i18n.getMessage(key, substitutions) || key;
+  }
+
+  /** Rellena todo el texto estático del popup con el idioma del navegador (chrome.i18n). */
+  function localizeStaticText() {
+    document.querySelectorAll('[data-i18n]').forEach((el) => {
+      el.textContent = t(el.dataset.i18n);
+    });
+    document.querySelectorAll('[data-i18n-aria-label]').forEach((el) => {
+      el.setAttribute('aria-label', t(el.dataset.i18nAriaLabel));
+    });
+  }
+
+  /**
+   * Textos que dependen a la vez del idioma Y de datos dinámicos (título real
+   * de la pestaña, si hay content script disponible). No pueden vivir en
+   * data-i18n porque localizeStaticText() los pisaría con el placeholder
+   * genérico; se recalculan a mano cada vez que cambia el idioma.
+   */
+  function refreshSiteText() {
+    els.title.textContent = local.tabInfoLoaded ? local.tabTitleRaw || t('siteUntitledTab') : t('siteLoading');
+    if (local.tabInfoLoaded) {
+      els.domain.textContent = local.domain || t('siteSpecialPage');
+    }
+    els.noMediaBadge.textContent = local.noContentScript ? t('badgeNotAvailable') : t('badgeNoAudio');
+  }
+
+  /** Cambia el idioma (auto/en/es), recarga los mensajes si hace falta y re-traduce todo. */
+  async function applyLanguage(lang) {
+    local.language = LANG_ORDER.includes(lang) ? lang : 'auto';
+    await loadOverrideMessages(local.language);
+
+    localizeStaticText();
+    refreshSiteText();
+    renderMute(local.muted);
+    applyTheme(local.theme);
+
+    const label = t(LANG_LABEL_KEYS[local.language]);
+    els.langToggleLabel.textContent = LANG_BUTTON_TEXT[local.language];
+    els.langToggle.setAttribute('aria-label', t('langAriaLabel', [label]));
+    els.langToggle.title = t('langTitle', [label]);
+  }
+
+  /** Marca el botón de preset activo y refleja aria-pressed en el resto. */
+  function applyEqPreset(preset) {
+    local.eqPreset = preset in EQ_LABEL_KEYS ? preset : 'none';
+    els.eqPresetButtons.forEach((btn) => {
+      btn.setAttribute('aria-pressed', String(btn.dataset.preset === local.eqPreset));
+    });
+  }
+
+  /** Aplica el tema elegido al documento y refleja el icono/estado del botón. */
+  function applyTheme(theme) {
+    local.theme = theme;
+    if (theme === 'auto') {
+      document.documentElement.removeAttribute('data-theme');
+    } else {
+      document.documentElement.setAttribute('data-theme', theme);
+    }
+    const label = t(THEME_LABEL_KEYS[theme]);
+    els.themeIconAuto.classList.toggle('hidden', theme !== 'auto');
+    els.themeIconLight.classList.toggle('hidden', theme !== 'light');
+    els.themeIconDark.classList.toggle('hidden', theme !== 'dark');
+    els.themeToggle.setAttribute('aria-label', t('themeAriaLabel', [label]));
+    els.themeToggle.title = t('themeTitle', [label]);
+  }
 
   const FALLBACK_FAVICON =
     'data:image/svg+xml;utf8,' +
@@ -93,7 +216,7 @@
   function renderMute(muted) {
     local.muted = muted;
     els.muteBtn.setAttribute('aria-pressed', String(muted));
-    els.muteLabel.textContent = muted ? 'Unmute' : 'Mute';
+    els.muteLabel.textContent = muted ? t('btnUnmute') : t('btnMute');
     els.iconUnmuted.classList.toggle('hidden', muted);
     els.iconMuted.classList.toggle('hidden', !muted);
     els.value.classList.toggle('volume-card__value--muted', muted);
@@ -166,7 +289,21 @@
 
   // ── Inicialización ──────────────────────────────────────────────────────
   async function init() {
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    localizeStaticText(); // síncrono con chrome.i18n: evita parpadeo mientras se lee el idioma guardado
+
+    const [[tab], stored] = await Promise.all([
+      chrome.tabs.query({ active: true, currentWindow: true }),
+      new Promise((resolve) =>
+        chrome.storage.local.get(
+          ['rememberEnabled', 'volumes', 'theme', 'eqPreset', 'bassBoostEnabled', 'voiceBoostEnabled', 'language'],
+          resolve
+        )
+      ),
+    ]);
+
+    await applyLanguage(LANG_ORDER.includes(stored.language) ? stored.language : 'auto');
+    applyTheme(THEME_ORDER.includes(stored.theme) ? stored.theme : 'auto');
+
     if (!tab) return;
 
     local.tabId = tab.id;
@@ -178,19 +315,16 @@
       domain = '';
     }
     local.domain = domain;
-
-    els.title.textContent = tab.title || 'Pestaña sin título';
-    els.domain.textContent = domain || 'Página especial del navegador';
+    local.tabTitleRaw = tab.title || '';
+    local.tabInfoLoaded = true;
+    refreshSiteText();
     els.favicon.src = tab.favIconUrl || FALLBACK_FAVICON;
     els.favicon.onerror = () => {
       els.favicon.src = FALLBACK_FAVICON;
     };
 
-    // 1. Leer preferencias guardadas.
-    const stored = await new Promise((resolve) =>
-      chrome.storage.local.get(['rememberEnabled', 'volumes'], resolve)
-    );
-    local.rememberEnabled = stored.rememberEnabled !== false;
+    // 1. Aplicar preferencias ya cargadas.
+    local.rememberEnabled = stored.rememberEnabled === true;
     els.rememberToggle.checked = local.rememberEnabled;
 
     const savedVolume =
@@ -204,9 +338,12 @@
     const response = await sendToContentScript({ type: 'SV_GET_STATE' });
 
     if (response && response.ok) {
-      const { volume, muted, hasMedia } = response.state;
+      const { volume, muted, hasMedia, eqPreset, bassBoost, voiceBoost } = response.state;
       renderVolume(volume);
       renderMute(muted);
+      applyEqPreset(eqPreset);
+      els.voiceBoostToggle.checked = Boolean(voiceBoost);
+      els.bassBoostToggle.checked = Boolean(bassBoost);
       local.volumeBeforeMute = muted ? savedVolume : volume;
       els.noMediaBadge.classList.toggle('hidden', hasMedia);
       updateBadge(volume);
@@ -216,12 +353,19 @@
       // el último valor guardado solo como referencia y deshabilitamos los
       // controles para no generar una falsa sensación de control.
       renderVolume(savedVolume);
-      els.noMediaBadge.textContent = 'No disponible aquí';
+      applyEqPreset(stored.eqPreset);
+      els.voiceBoostToggle.checked = Boolean(stored.voiceBoostEnabled);
+      els.bassBoostToggle.checked = Boolean(stored.bassBoostEnabled);
+      local.noContentScript = true;
+      refreshSiteText();
       els.noMediaBadge.classList.remove('hidden');
       els.slider.disabled = true;
       els.resetBtn.disabled = true;
       els.muteBtn.disabled = true;
-      showStatus('Esta página no permite ajustar el audio.');
+      els.eqPresetButtons.forEach((btn) => { btn.disabled = true; });
+      els.voiceBoostToggle.disabled = true;
+      els.bassBoostToggle.disabled = true;
+      showStatus(t('statusNoAudioPage'));
     }
   }
 
@@ -242,7 +386,7 @@
   els.resetBtn.addEventListener('click', () => {
     if (local.muted) renderMute(false);
     setVolume(100);
-    showStatus('Volumen restablecido a 100%');
+    showStatus(t('statusVolumeReset'));
   });
 
   els.muteBtn.addEventListener('click', () => {
@@ -252,7 +396,46 @@
   els.rememberToggle.addEventListener('change', () => {
     local.rememberEnabled = els.rememberToggle.checked;
     chrome.storage.local.set({ rememberEnabled: local.rememberEnabled });
-    showStatus(local.rememberEnabled ? 'Se recordará el volumen de este sitio' : 'Ya no se recordará el volumen');
+    showStatus(t(local.rememberEnabled ? 'statusRememberOn' : 'statusRememberOff'));
+  });
+
+  els.eqPresetButtons.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const preset = btn.dataset.preset;
+      if (preset === local.eqPreset) return;
+      applyEqPreset(preset);
+      chrome.storage.local.set({ eqPreset: preset });
+      sendToContentScript({ type: 'SV_SET_EQ_PRESET', value: preset });
+      showStatus(preset === 'none' ? t('statusEqOff') : t('statusEqOn', [t(EQ_LABEL_KEYS[preset])]));
+    });
+  });
+
+  els.voiceBoostToggle.addEventListener('change', () => {
+    const enabled = els.voiceBoostToggle.checked;
+    chrome.storage.local.set({ voiceBoostEnabled: enabled });
+    sendToContentScript({ type: 'SV_SET_VOICE_BOOST', value: enabled });
+    showStatus(t(enabled ? 'statusVoiceBoostOn' : 'statusVoiceBoostOff'));
+  });
+
+  els.bassBoostToggle.addEventListener('change', () => {
+    const enabled = els.bassBoostToggle.checked;
+    chrome.storage.local.set({ bassBoostEnabled: enabled });
+    sendToContentScript({ type: 'SV_SET_BASS_BOOST', value: enabled });
+    showStatus(t(enabled ? 'statusBassBoostOn' : 'statusBassBoostOff'));
+  });
+
+  els.themeToggle.addEventListener('click', () => {
+    const next = THEME_ORDER[(THEME_ORDER.indexOf(local.theme) + 1) % THEME_ORDER.length];
+    applyTheme(next);
+    chrome.storage.local.set({ theme: next });
+    showStatus(t('themeTitle', [t(THEME_LABEL_KEYS[next])]));
+  });
+
+  els.langToggle.addEventListener('click', async () => {
+    const next = LANG_ORDER[(LANG_ORDER.indexOf(local.language) + 1) % LANG_ORDER.length];
+    await applyLanguage(next);
+    chrome.storage.local.set({ language: next });
+    showStatus(t('langTitle', [t(LANG_LABEL_KEYS[next])]));
   });
 
   init();

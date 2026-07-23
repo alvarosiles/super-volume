@@ -34,18 +34,53 @@
 
   const MAX_VOLUME_PERCENT = 600;
 
+  // Presets del ecualizador de 3 bandas (dB de ganancia por banda).
+  // bass: low-shelf ~150Hz · mid: peaking ~2.5kHz (rango de diálogo) · treble: high-shelf ~8kHz.
+  const EQ_PRESETS = {
+    none: { bass: 0, mid: 0, treble: 0 },
+    cine: { bass: 6, mid: 7, treble: -1 }, // graves de impacto + diálogo claro, agudos suavizados
+    musica: { bass: 5, mid: 1, treble: 4 }, // curva en "V": graves y agudos realzados
+    juegos: { bass: 3, mid: 2, treble: 7 }, // agudos para pasos/direccionalidad, graves moderados
+  };
+
+  // Voice/Bass Boost son un refuerzo adicional que se SUMA al preset activo
+  // (incluido 'none'), en vez de ser presets propios.
+  const BASS_BOOST_EXTRA_DB = 9;
+  const VOICE_BOOST_EXTRA_DB = 10;
+
   // Estado interno de este frame/pestaña. Todo vive en memoria; nada se
   // guarda aquí en disco (eso lo hace el popup vía chrome.storage).
   const state = {
     audioContext: null,
     gainNode: null,
+    bassFilter: null, // BiquadFilterNode 'lowshelf'
+    midFilter: null, // BiquadFilterNode 'peaking'
+    trebleFilter: null, // BiquadFilterNode 'highshelf'
     sources: new WeakMap(), // HTMLMediaElement -> MediaElementAudioSourceNode
     attachedElements: new Set(), // para poder recorrerlos (WeakMap no es iterable)
     currentPercent: 100, // volumen "objetivo" (0-600)
     muted: false,
     percentBeforeMute: 100,
+    eqPreset: 'none',
+    bassBoost: false,
+    voiceBoost: false,
     observer: null,
   };
+
+  /** Ganancia final por banda: la del preset activo + los boosts independientes que estén activos. */
+  function computeEqGains() {
+    const preset = EQ_PRESETS[state.eqPreset] || EQ_PRESETS.none;
+    return {
+      bass: preset.bass + (state.bassBoost ? BASS_BOOST_EXTRA_DB : 0),
+      mid: preset.mid + (state.voiceBoost ? VOICE_BOOST_EXTRA_DB : 0),
+      treble: preset.treble,
+    };
+  }
+
+  /** Hay algo del ecualizador (preset o boost) activo que valga la pena mantener/crear. */
+  function hasEqActive() {
+    return state.eqPreset !== 'none' || state.bassBoost || state.voiceBoost;
+  }
 
   /** Obtiene el dominio actual sin "www." (mismo criterio que usa el popup). */
   function getDomain() {
@@ -56,14 +91,40 @@
     }
   }
 
-  /** Crea (si no existe) el AudioContext + GainNode compartidos del frame. */
+  /** Crea (si no existe) el AudioContext + grafo de nodos compartidos del frame. */
   function ensureAudioGraph() {
     if (!state.audioContext) {
       const AudioContextClass = window.AudioContext || window.webkitAudioContext;
       state.audioContext = new AudioContextClass();
+
+      // Cadena: fuente -> bassFilter -> midFilter -> trebleFilter -> gainNode -> salida.
+      // Los filtros nacen con la ganancia combinada actual (preset + boosts
+      // independientes), por ejemplo recordada de una apertura anterior.
+      const gains = computeEqGains();
+
+      state.bassFilter = state.audioContext.createBiquadFilter();
+      state.bassFilter.type = 'lowshelf';
+      state.bassFilter.frequency.value = 150;
+      state.bassFilter.gain.value = gains.bass;
+
+      state.midFilter = state.audioContext.createBiquadFilter();
+      state.midFilter.type = 'peaking';
+      state.midFilter.frequency.value = 2500;
+      state.midFilter.Q.value = 0.9;
+      state.midFilter.gain.value = gains.mid;
+
+      state.trebleFilter = state.audioContext.createBiquadFilter();
+      state.trebleFilter.type = 'highshelf';
+      state.trebleFilter.frequency.value = 8000;
+      state.trebleFilter.gain.value = gains.treble;
+
       state.gainNode = state.audioContext.createGain();
-      state.gainNode.connect(state.audioContext.destination);
       state.gainNode.gain.value = state.currentPercent / 100;
+
+      state.bassFilter.connect(state.midFilter);
+      state.midFilter.connect(state.trebleFilter);
+      state.trebleFilter.connect(state.gainNode);
+      state.gainNode.connect(state.audioContext.destination);
     }
 
     // Los navegadores suspenden el AudioContext hasta que hay interacción
@@ -89,7 +150,7 @@
     try {
       const ctx = ensureAudioGraph();
       const source = ctx.createMediaElementSource(el);
-      source.connect(state.gainNode);
+      source.connect(state.bassFilter);
       state.sources.set(el, source);
       state.attachedElements.add(el);
     } catch (_err) {
@@ -167,6 +228,41 @@
     }
   }
 
+  /** Re-aplica la ganancia combinada (preset + boosts) a los 3 filtros, creando el grafo si hace falta. */
+  function applyEqGains() {
+    const elements = document.querySelectorAll('video, audio');
+    if (!state.audioContext) {
+      // Sin AudioContext y sin nada que amplificar: no hace falta crear el
+      // grafo todavía. El MutationObserver lo hará (con el estado correcto,
+      // porque ya guardamos eqPreset/bassBoost/voiceBoost) en cuanto aparezca
+      // un elemento real, y activateBoost() lo hará si ya hay elementos.
+      if (!hasEqActive() || elements.length === 0) return;
+      activateBoost(elements);
+    }
+
+    const gains = computeEqGains();
+    const t = state.audioContext.currentTime;
+    state.bassFilter.gain.setTargetAtTime(gains.bass, t, 0.02);
+    state.midFilter.gain.setTargetAtTime(gains.mid, t, 0.02);
+    state.trebleFilter.gain.setTargetAtTime(gains.treble, t, 0.02);
+  }
+
+  /** Aplica un preset del ecualizador, reutilizando el mismo patrón lazy de applyVolume/setMuted. */
+  function setEqPreset(preset) {
+    const key = EQ_PRESETS[preset] ? preset : 'none';
+    if (key === state.eqPreset) return;
+    state.eqPreset = key;
+    applyEqGains();
+  }
+
+  /** Activa/desactiva el refuerzo independiente de graves o voz (se suma al preset activo). */
+  function setEqBoost(kind, enabled) {
+    const key = kind === 'bass' ? 'bassBoost' : 'voiceBoost';
+    if (enabled === state[key]) return;
+    state[key] = enabled;
+    applyEqGains();
+  }
+
   function hasMediaElements() {
     return document.querySelectorAll('video, audio').length > 0;
   }
@@ -177,6 +273,9 @@
       muted: state.muted,
       hasMedia: hasMediaElements(),
       domain: getDomain(),
+      eqPreset: state.eqPreset,
+      bassBoost: state.bassBoost,
+      voiceBoost: state.voiceBoost,
     };
   }
 
@@ -190,10 +289,10 @@
     if (state.observer) return;
 
     state.observer = new MutationObserver((mutations) => {
-      // Si el volumen sigue en 100% y no estamos en mute, no hay boost que
-      // mantener: ignoramos por completo los elementos nuevos (barato y sin
-      // crear ningún AudioContext de más).
-      if (state.currentPercent === 100 && !state.muted) return;
+      // Si no hay ningún boost activo (volumen, mute o ecualizador), no hay
+      // nada que mantener: ignoramos por completo los elementos nuevos
+      // (barato y sin crear ningún AudioContext de más).
+      if (state.currentPercent === 100 && !state.muted && !hasEqActive()) return;
 
       for (const mutation of mutations) {
         mutation.addedNodes.forEach((node) => {
@@ -242,6 +341,21 @@
         sendResponse({ ok: true, state: currentState() });
         break;
 
+      case 'SV_SET_EQ_PRESET':
+        setEqPreset(String(message.value));
+        sendResponse({ ok: true, state: currentState() });
+        break;
+
+      case 'SV_SET_BASS_BOOST':
+        setEqBoost('bass', Boolean(message.value));
+        sendResponse({ ok: true, state: currentState() });
+        break;
+
+      case 'SV_SET_VOICE_BOOST':
+        setEqBoost('voice', Boolean(message.value));
+        sendResponse({ ok: true, state: currentState() });
+        break;
+
       case 'SV_GET_STATE':
         sendResponse({ ok: true, state: currentState() });
         break;
@@ -266,18 +380,28 @@
 
     // Si el usuario activó "recordar volumen por sitio", aplicamos de una
     // vez el valor guardado para este dominio (si existe y no es 100%).
-    chrome.storage.local.get(['rememberEnabled', 'volumes'], (data) => {
-      if (chrome.runtime.lastError) return;
+    chrome.storage.local.get(
+      ['rememberEnabled', 'volumes', 'eqPreset', 'bassBoostEnabled', 'voiceBoostEnabled'],
+      (data) => {
+        if (chrome.runtime.lastError) return;
 
-      const rememberEnabled = data.rememberEnabled !== false; // true por defecto
-      const volumes = data.volumes || {};
-      const domain = getDomain();
-      const saved = volumes[domain];
+        const rememberEnabled = data.rememberEnabled === true; // false por defecto
+        const volumes = data.volumes || {};
+        const domain = getDomain();
+        const saved = volumes[domain];
 
-      if (rememberEnabled && typeof saved === 'number' && saved !== 100) {
-        applyVolume(saved);
+        if (rememberEnabled && typeof saved === 'number' && saved !== 100) {
+          applyVolume(saved);
+        }
+
+        // El preset y los boosts del ecualizador son preferencias globales
+        // (no por sitio): si el usuario los activó la última vez, se
+        // restauran en cada pestaña. Por defecto el preset es 'none'.
+        if (data.eqPreset && data.eqPreset !== 'none') setEqPreset(data.eqPreset);
+        if (data.bassBoostEnabled) setEqBoost('bass', true);
+        if (data.voiceBoostEnabled) setEqBoost('voice', true);
       }
-    });
+    );
   }
 
   if (document.readyState === 'loading') {
