@@ -1,3 +1,32 @@
+tecma claro y oscuro
+dacrk y ligth
+
+
+voice boost
+basss boost
+ que sea en esañol
+
+modo cinema
+
+
+ Privacidad
+El desarrollador divulgó que no recopilará ni usará tus datos. Para obtener más información, consulta la privacy policy del desarrollador.
+Este desarrollador declara el siguiente tratamiento de tus datos:
+No se venden a terceros, excepto en los casos de uso aprobados
+No se utilizan ni transfieren para fines no relacionados con la funcionalidad principal del elemento
+No se utilizan ni transfieren para determinar tu solvencia ni ofrecer préstamos
+
+
+control con teclado
+
+autolenguaje
+english
+configurar
+7.1 espeacker
+
+https://github.com/DesignerYUE/ChromeAppHeroes/tree/f4b576b1aedf568a45d08bfd8fecb66b7584f60b/backup/100-volume-master/1.4.0_0
+
+
 ahora
 https://github.com/alvarosiles/super-volume
 toma en cuenta que  la extnsion
