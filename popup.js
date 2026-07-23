@@ -179,20 +179,48 @@
         '<path d="M3 9v6h4l5 5V4L7 9H3z"/></svg>'
     );
 
-  /** Envía un mensaje al content script de la pestaña activa (con manejo de error). */
-  function sendToContentScript(message) {
+  /** Envía `message` a un frame concreto de la pestaña activa (o a todos si se omite `frameId`). */
+  function sendToFrame(message, frameId) {
     return new Promise((resolve) => {
-      if (local.tabId == null) return resolve(null);
-      chrome.tabs.sendMessage(local.tabId, message, (response) => {
+      const options = frameId == null ? {} : { frameId };
+      chrome.tabs.sendMessage(local.tabId, message, options, (response) => {
         if (chrome.runtime.lastError) {
-          // No hay content script en esta página (chrome://, Web Store, PDF, etc.)
-          local.contentScriptAvailable = false;
           resolve(null);
           return;
         }
         resolve(response || null);
       });
     });
+  }
+
+  /**
+   * Envía un mensaje al content script de la pestaña activa. Páginas como
+   * YouTube cargan varios frames a la vez en la misma pestaña (el frame
+   * principal, un iframe oculto de accounts.google.com, un about:blank...);
+   * como todos matchean <all_urls> también tienen su propia instancia de
+   * content.js. chrome.tabs.sendMessage sin frameId puede devolver la
+   * respuesta de CUALQUIERA de esos frames, y si contesta uno sin <video>
+   * (el de login, el about:blank) el popup ve "sin audio" aunque el video
+   * real esté sonando en el frame principal. Por eso primero preguntamos
+   * puntualmente al frame principal (frameId 0); solo si ahí no hay medios
+   * (p. ej. un sitio que embebe el reproductor en un <iframe> propio)
+   * probamos sin frameId como respaldo.
+   */
+  async function sendToContentScript(message) {
+    if (local.tabId == null) return null;
+
+    const topResponse = await sendToFrame(message, 0);
+    if (topResponse && topResponse.ok && topResponse.state && topResponse.state.hasMedia) {
+      return topResponse;
+    }
+
+    const anyResponse = await sendToFrame(message);
+    if (anyResponse) return anyResponse;
+
+    // Nada respondió: no hay content script disponible en esta página
+    // (chrome://, Web Store, un PDF, etc.).
+    local.contentScriptAvailable = false;
+    return topResponse;
   }
 
   /** Actualiza el gradiente de relleno del slider según el valor actual. */
