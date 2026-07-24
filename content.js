@@ -48,6 +48,53 @@
   const BASS_BOOST_EXTRA_DB = 9;
   const VOICE_BOOST_EXTRA_DB = 10;
 
+  // ── Modos de sonido virtual (2.0 / 2.1 / 5.1 / 7.1) ─────────────────────
+  // No hay canales físicos discretos en un <video>/<audio> de Chrome: estos
+  // modos "virtualizan" la sensación envolvente sobre una salida estéreo
+  // normal, combinando dos técnicas independientes:
+  //   1. Refuerzo tonal (bass/mid) que se SUMA al EQ existente (computeEqGains).
+  //   2. Un "wide stage" de espacialización: cross-feed de polaridad invertida
+  //      entre canales (ensancha la imagen estéreo) + un pequeño delay (efecto
+  //      Haas) + una reverb ligera generada de forma sintética (sin archivos
+  //      de impulso externos, para no depender de red).
+  // 'stereo' (2.0, modo por defecto) deja el audio intacto: sin cross-feed,
+  // sin reverb y sin refuerzo extra de EQ.
+  const SOUND_MODES = ['stereo', 'virtual21', 'virtual51', 'virtual71'];
+
+  const SURROUND_EQ_EXTRA = {
+    stereo: { bass: 0, mid: 0 },
+    virtual21: { bass: 4, mid: 2 }, // "2.1": graves reforzados + presencia media para que la voz no se pierda
+    virtual51: { bass: 2, mid: 1 },
+    virtual71: { bass: 3, mid: 1 },
+  };
+
+  // wide: activa el stage de espacialización. crossfeed: magnitud (0-1) del
+  // cross-feed invertido entre canales. delayMs: delay del cross-feed
+  // (Haas). reverbWet: nivel de retorno de la reverb sintética.
+  const SURROUND_SPATIAL_PROFILES = {
+    stereo: { wide: false, crossfeed: 0, delayMs: 0, reverbWet: 0 },
+    virtual21: { wide: false, crossfeed: 0, delayMs: 0, reverbWet: 0 },
+    virtual51: { wide: true, crossfeed: 0.35, delayMs: 8, reverbWet: 0.12 },
+    // 7.1: mismo mecanismo que 5.1 pero con más separación/profundidad, y
+    // escalado además por `surroundIntensity` (0-100, configurable por el usuario).
+    virtual71: { wide: true, crossfeed: 0.5, delayMs: 14, reverbWet: 0.2 },
+  };
+
+  const DEFAULT_SURROUND_INTENSITY = 60;
+
+  /** Genera una respuesta al impulso sintética (ruido blanco con caída exponencial) para la reverb ligera. */
+  function createSyntheticImpulse(ctx, durationSec, decay) {
+    const length = Math.max(1, Math.round(ctx.sampleRate * durationSec));
+    const buffer = ctx.createBuffer(2, length, ctx.sampleRate);
+    for (let channel = 0; channel < 2; channel++) {
+      const data = buffer.getChannelData(channel);
+      for (let i = 0; i < length; i++) {
+        data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, decay);
+      }
+    }
+    return buffer;
+  }
+
   // Estado interno de este frame/pestaña. Todo vive en memoria; nada se
   // guarda aquí en disco (eso lo hace el popup vía chrome.storage).
   const state = {
@@ -56,6 +103,19 @@
     bassFilter: null, // BiquadFilterNode 'lowshelf'
     midFilter: null, // BiquadFilterNode 'peaking'
     trebleFilter: null, // BiquadFilterNode 'highshelf'
+    // Stage de espacialización virtual (ver SOUND_MODES más arriba).
+    surroundInput: null, // GainNode (unity), punto de entrada del stage
+    surroundOut: null, // GainNode (unity), punto de salida del stage
+    dryGain: null, // GainNode: pasthrough sin procesar (stereo/virtual21)
+    splitter: null, // ChannelSplitterNode(2)
+    merger: null, // ChannelMergerNode(2)
+    crossLtoR: null, // GainNode (negativo): cross-feed L -> R
+    crossRtoL: null, // GainNode (negativo): cross-feed R -> L
+    delayLtoR: null, // DelayNode del cross-feed L->R (efecto Haas)
+    delayRtoL: null, // DelayNode del cross-feed R->L
+    wideGain: null, // GainNode: nivel del "wide stage" (5.1/7.1)
+    convolver: null, // ConvolverNode: reverb sintética ligera
+    reverbSend: null, // GainNode: cuánta señal se manda a la reverb
     sources: new WeakMap(), // HTMLMediaElement -> MediaElementAudioSourceNode
     attachedElements: new Set(), // para poder recorrerlos (WeakMap no es iterable)
     currentPercent: 100, // volumen "objetivo" (0-600)
@@ -64,15 +124,18 @@
     eqPreset: 'none',
     bassBoost: false,
     voiceBoost: false,
+    surroundMode: 'stereo',
+    surroundIntensity: DEFAULT_SURROUND_INTENSITY,
     observer: null,
   };
 
-  /** Ganancia final por banda: la del preset activo + los boosts independientes que estén activos. */
+  /** Ganancia final por banda: la del preset activo + los boosts independientes + el refuerzo del modo de sonido. */
   function computeEqGains() {
     const preset = EQ_PRESETS[state.eqPreset] || EQ_PRESETS.none;
+    const surroundExtra = SURROUND_EQ_EXTRA[state.surroundMode] || SURROUND_EQ_EXTRA.stereo;
     return {
-      bass: preset.bass + (state.bassBoost ? BASS_BOOST_EXTRA_DB : 0),
-      mid: preset.mid + (state.voiceBoost ? VOICE_BOOST_EXTRA_DB : 0),
+      bass: preset.bass + surroundExtra.bass + (state.bassBoost ? BASS_BOOST_EXTRA_DB : 0),
+      mid: preset.mid + surroundExtra.mid + (state.voiceBoost ? VOICE_BOOST_EXTRA_DB : 0),
       treble: preset.treble,
     };
   }
@@ -80,6 +143,11 @@
   /** Hay algo del ecualizador (preset o boost) activo que valga la pena mantener/crear. */
   function hasEqActive() {
     return state.eqPreset !== 'none' || state.bassBoost || state.voiceBoost;
+  }
+
+  /** Hay un modo de sonido distinto del estéreo normal (2.0) activo. */
+  function hasSurroundActive() {
+    return state.surroundMode !== 'stereo';
   }
 
   /** Obtiene el dominio actual sin "www." (mismo criterio que usa el popup). */
@@ -121,9 +189,70 @@
       state.gainNode = state.audioContext.createGain();
       state.gainNode.gain.value = state.currentPercent / 100;
 
+      // ── Stage de espacialización virtual (2.0/2.1/5.1/7.1) ────────────
+      // Estructura fija (se crea una sola vez); cambiar de modo solo mueve
+      // ganancias con setTargetAtTime (ver applySurroundGraph), nunca
+      // reconecta nodos, para evitar clicks/pops de audio.
+      const spatial = SURROUND_SPATIAL_PROFILES[state.surroundMode] || SURROUND_SPATIAL_PROFILES.stereo;
+      const intensityScale = state.surroundMode === 'virtual71' ? state.surroundIntensity / 100 : 1;
+
+      state.surroundInput = state.audioContext.createGain();
+      state.surroundOut = state.audioContext.createGain();
+
+      // Ruta seca (passthrough): activa en 'stereo' y 'virtual21'.
+      state.dryGain = state.audioContext.createGain();
+      state.dryGain.gain.value = spatial.wide ? 0 : 1;
+      state.surroundInput.connect(state.dryGain);
+      state.dryGain.connect(state.surroundOut);
+
+      // Ruta "wide": cross-feed de polaridad invertida (ensancha la imagen
+      // estéreo) con un pequeño delay tipo Haas, activa en 5.1/7.1.
+      state.splitter = state.audioContext.createChannelSplitter(2);
+      state.merger = state.audioContext.createChannelMerger(2);
+      state.surroundInput.connect(state.splitter);
+
+      // Directo: cada canal a su propia salida.
+      state.splitter.connect(state.merger, 0, 0);
+      state.splitter.connect(state.merger, 1, 1);
+
+      const crossMag = -(spatial.crossfeed * intensityScale);
+      const delaySec = (spatial.delayMs * intensityScale) / 1000;
+
+      state.crossLtoR = state.audioContext.createGain();
+      state.crossLtoR.gain.value = crossMag;
+      state.delayLtoR = state.audioContext.createDelay(0.05);
+      state.delayLtoR.delayTime.value = delaySec;
+      state.splitter.connect(state.crossLtoR, 0);
+      state.crossLtoR.connect(state.delayLtoR);
+      state.delayLtoR.connect(state.merger, 0, 1);
+
+      state.crossRtoL = state.audioContext.createGain();
+      state.crossRtoL.gain.value = crossMag;
+      state.delayRtoL = state.audioContext.createDelay(0.05);
+      state.delayRtoL.delayTime.value = delaySec;
+      state.splitter.connect(state.crossRtoL, 1);
+      state.crossRtoL.connect(state.delayRtoL);
+      state.delayRtoL.connect(state.merger, 0, 0);
+
+      state.wideGain = state.audioContext.createGain();
+      state.wideGain.gain.value = spatial.wide ? 1 : 0;
+      state.merger.connect(state.wideGain);
+      state.wideGain.connect(state.surroundOut);
+
+      // Reverb ligera sintética (sin archivos externos), sumada en paralelo.
+      state.convolver = state.audioContext.createConvolver();
+      state.convolver.normalize = true;
+      state.convolver.buffer = createSyntheticImpulse(state.audioContext, 1.2, 3.2);
+      state.reverbSend = state.audioContext.createGain();
+      state.reverbSend.gain.value = spatial.reverbWet * intensityScale;
+      state.surroundInput.connect(state.reverbSend);
+      state.reverbSend.connect(state.convolver);
+      state.convolver.connect(state.surroundOut);
+
       state.bassFilter.connect(state.midFilter);
       state.midFilter.connect(state.trebleFilter);
-      state.trebleFilter.connect(state.gainNode);
+      state.trebleFilter.connect(state.surroundInput);
+      state.surroundOut.connect(state.gainNode);
       state.gainNode.connect(state.audioContext.destination);
     }
 
@@ -228,15 +357,16 @@
     }
   }
 
-  /** Re-aplica la ganancia combinada (preset + boosts) a los 3 filtros, creando el grafo si hace falta. */
+  /** Re-aplica la ganancia combinada (preset + boosts + modo de sonido) a los 3 filtros, creando el grafo si hace falta. */
   function applyEqGains() {
     const elements = document.querySelectorAll('video, audio');
     if (!state.audioContext) {
       // Sin AudioContext y sin nada que amplificar: no hace falta crear el
       // grafo todavía. El MutationObserver lo hará (con el estado correcto,
-      // porque ya guardamos eqPreset/bassBoost/voiceBoost) en cuanto aparezca
-      // un elemento real, y activateBoost() lo hará si ya hay elementos.
-      if (!hasEqActive() || elements.length === 0) return;
+      // porque ya guardamos eqPreset/bassBoost/voiceBoost/surroundMode) en
+      // cuanto aparezca un elemento real, y activateBoost() lo hará si ya
+      // hay elementos.
+      if ((!hasEqActive() && !hasSurroundActive()) || elements.length === 0) return;
       activateBoost(elements);
     }
 
@@ -263,6 +393,51 @@
     applyEqGains();
   }
 
+  /** Re-aplica los parámetros del stage de espacialización (dry/wide/cross-feed/delay/reverb), creando el grafo si hace falta. */
+  function applySurroundGraph() {
+    const elements = document.querySelectorAll('video, audio');
+    if (!state.audioContext) {
+      if ((!hasEqActive() && !hasSurroundActive()) || elements.length === 0) return;
+      activateBoost(elements);
+    }
+
+    const spatial = SURROUND_SPATIAL_PROFILES[state.surroundMode] || SURROUND_SPATIAL_PROFILES.stereo;
+    const intensityScale = state.surroundMode === 'virtual71' ? state.surroundIntensity / 100 : 1;
+    const t = state.audioContext.currentTime;
+
+    state.dryGain.gain.setTargetAtTime(spatial.wide ? 0 : 1, t, 0.02);
+    state.wideGain.gain.setTargetAtTime(spatial.wide ? 1 : 0, t, 0.02);
+
+    const crossMag = -(spatial.crossfeed * intensityScale);
+    state.crossLtoR.gain.setTargetAtTime(crossMag, t, 0.02);
+    state.crossRtoL.gain.setTargetAtTime(crossMag, t, 0.02);
+
+    const delaySec = (spatial.delayMs * intensityScale) / 1000;
+    state.delayLtoR.delayTime.setTargetAtTime(delaySec, t, 0.02);
+    state.delayRtoL.delayTime.setTargetAtTime(delaySec, t, 0.02);
+
+    state.reverbSend.gain.setTargetAtTime(spatial.reverbWet * intensityScale, t, 0.05);
+
+    // El refuerzo de bass/mid asociado al modo también cambió.
+    applyEqGains();
+  }
+
+  /** Cambia el modo de sonido (2.0/2.1/5.1/7.1). 'stereo' es el modo por defecto (sin procesar). */
+  function setSurroundMode(mode) {
+    const key = SOUND_MODES.includes(mode) ? mode : 'stereo';
+    if (key === state.surroundMode) return;
+    state.surroundMode = key;
+    applySurroundGraph();
+  }
+
+  /** Ajusta la intensidad (0-100) del modo Virtual 7.1; no afecta a los demás modos. */
+  function setSurroundIntensity(value) {
+    const clamped = Math.min(100, Math.max(0, Number(value) || 0));
+    if (clamped === state.surroundIntensity) return;
+    state.surroundIntensity = clamped;
+    if (state.surroundMode === 'virtual71') applySurroundGraph();
+  }
+
   function hasMediaElements() {
     return document.querySelectorAll('video, audio').length > 0;
   }
@@ -276,6 +451,8 @@
       eqPreset: state.eqPreset,
       bassBoost: state.bassBoost,
       voiceBoost: state.voiceBoost,
+      surroundMode: state.surroundMode,
+      surroundIntensity: state.surroundIntensity,
     };
   }
 
@@ -289,10 +466,10 @@
     if (state.observer) return;
 
     state.observer = new MutationObserver((mutations) => {
-      // Si no hay ningún boost activo (volumen, mute o ecualizador), no hay
-      // nada que mantener: ignoramos por completo los elementos nuevos
-      // (barato y sin crear ningún AudioContext de más).
-      if (state.currentPercent === 100 && !state.muted && !hasEqActive()) return;
+      // Si no hay ningún boost activo (volumen, mute, ecualizador o modo de
+      // sonido), no hay nada que mantener: ignoramos por completo los
+      // elementos nuevos (barato y sin crear ningún AudioContext de más).
+      if (state.currentPercent === 100 && !state.muted && !hasEqActive() && !hasSurroundActive()) return;
 
       for (const mutation of mutations) {
         mutation.addedNodes.forEach((node) => {
@@ -356,6 +533,16 @@
         sendResponse({ ok: true, state: currentState() });
         break;
 
+      case 'SV_SET_SURROUND_MODE':
+        setSurroundMode(String(message.value));
+        sendResponse({ ok: true, state: currentState() });
+        break;
+
+      case 'SV_SET_SURROUND_INTENSITY':
+        setSurroundIntensity(message.value);
+        sendResponse({ ok: true, state: currentState() });
+        break;
+
       case 'SV_GET_STATE':
         sendResponse({ ok: true, state: currentState() });
         break;
@@ -381,7 +568,15 @@
     // Si el usuario activó "recordar volumen por sitio", aplicamos de una
     // vez el valor guardado para este dominio (si existe y no es 100%).
     chrome.storage.local.get(
-      ['rememberEnabled', 'volumes', 'eqPreset', 'bassBoostEnabled', 'voiceBoostEnabled'],
+      [
+        'rememberEnabled',
+        'volumes',
+        'eqPreset',
+        'bassBoostEnabled',
+        'voiceBoostEnabled',
+        'surroundMode',
+        'surroundIntensity',
+      ],
       (data) => {
         if (chrome.runtime.lastError) return;
 
@@ -394,12 +589,15 @@
           applyVolume(saved);
         }
 
-        // El preset y los boosts del ecualizador son preferencias globales
-        // (no por sitio): si el usuario los activó la última vez, se
-        // restauran en cada pestaña. Por defecto el preset es 'none'.
+        // El preset, los boosts del ecualizador y el modo de sonido son
+        // preferencias globales (no por sitio): si el usuario los activó la
+        // última vez, se restauran en cada pestaña. Por defecto: preset
+        // 'none' y modo de sonido 'stereo' (2.0).
         if (data.eqPreset && data.eqPreset !== 'none') setEqPreset(data.eqPreset);
         if (data.bassBoostEnabled) setEqBoost('bass', true);
         if (data.voiceBoostEnabled) setEqBoost('voice', true);
+        if (typeof data.surroundIntensity === 'number') state.surroundIntensity = Math.min(100, Math.max(0, data.surroundIntensity));
+        if (data.surroundMode && data.surroundMode !== 'stereo') setSurroundMode(data.surroundMode);
       }
     );
   }

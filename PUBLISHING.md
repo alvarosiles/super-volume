@@ -29,11 +29,49 @@ Google te va a pedir, como mínimo:
 |---|---|
 | Nombre | Super Volume |
 | Descripción resumida (132 caracteres) | "Aumenta el volumen de cualquier pestaña hasta 600% con Web Audio API, sin tocar el volumen del sistema." |
-| Descripción detallada | Puedes usar el bloque de "Características" del [README.md](README.md) |
+| Descripción detallada | Copia y pega el bloque de abajo |
 | Categoría | Herramientas (Tools) |
 | Idioma | Español |
 | Capturas de pantalla (mín. 1, recomendado 3-5, 1280×800 o 640×400) | Del popup en acción |
 | Icono de la tienda (128×128) | Ya lo tienes en `icons/icon128.png` |
+
+Texto listo para pegar en "Descripción detallada":
+
+```
+🔊 Super Volume — el volumen de tu navegador, a tu manera
+
+¿Ese video suena bajísimo aunque tengas el volumen del sistema al
+máximo? Super Volume amplifica el audio de cualquier pestaña hasta
+600%, directamente en el navegador, sin tocar el volumen de tu equipo.
+
+🚀 Características
+
+⭐️ Aumento de volumen de hasta el 600%
+⭐️ Controla el volumen de cualquier pestaña, de forma independiente
+⭐️ Ecualizador con presets: 🎬 Cine, 🎵 Música y 🎮 Juegos
+⭐️ Voice Boost, para resaltar voces y diálogos
+⭐️ Bass Boost, para graves más profundos
+⭐️ Recuerda el volumen guardado, sitio por sitio
+⭐️ Botones de Reset y Mute con un solo clic
+⭐️ Tema Claro, Oscuro o Automático (según tu sistema)
+⭐️ Disponible en Español e Inglés, con detección automática de idioma
+⭐️ Indicador en el icono con el % de volumen activo
+
+🔒 Tu privacidad, primero
+
+Todo el procesamiento de audio ocurre en tu propio navegador con la
+Web Audio API nativa de Chrome. No hay cuentas, no hay analítica, no
+hay servidores propios: ningún dato sale nunca de tu dispositivo.
+
+⚡ Liviano y sin distracciones
+
+Sin dependencias externas, sin scripts de terceros, sin publicidad.
+Solo lo justo y necesario para que tu audio suene como querés.
+
+Completamente gratis y sin anuncios
+
+Hecho con ❤️ por Alvaro Siles E.
+```
 
 ## 3. La parte que más rechazos causa: justificar permisos
 

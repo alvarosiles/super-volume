@@ -53,6 +53,25 @@
   "bassBoostLabel": { "message": "Bass Boost" },
   "rememberLabel": { "message": "Recordar volumen por sitio" },
 
+  "surroundCardLabel": { "message": "Modo de sonido" },
+  "surroundGroupAria": { "message": "Modo de sonido" },
+  "surroundModeStereo": { "message": "Stereo 2.0" },
+  "surroundModeVirtual21": { "message": "Virtual 2.1" },
+  "surroundModeVirtual51": { "message": "Virtual 5.1" },
+  "surroundModeVirtual71": { "message": "Virtual 7.1" },
+  "surroundDescStereo": { "message": "Audio normal, sin procesamiento." },
+  "surroundDescVirtual21": {
+    "message": "Refuerzo inteligente de graves con Bass Boost independiente, manteniendo las voces claras."
+  },
+  "surroundDescVirtual51": {
+    "message": "Sonido envolvente virtual: mayor amplitud estéreo, reverb ligera, delay muy pequeño y posicionamiento espacial."
+  },
+  "surroundDescVirtual71": {
+    "message": "Envolvente avanzado: mejor separación izquierda/derecha, sensación de profundidad e intensidad configurable."
+  },
+  "surroundIntensityLabel": { "message": "Intensidad" },
+  "surroundIntensityAria": { "message": "Intensidad del modo Virtual 7.1" },
+
   "statusVolumeReset": { "message": "Volumen restablecido a 100%" },
   "statusNoAudioPage": { "message": "Esta página no permite ajustar el audio." },
   "statusRememberOn": { "message": "Se recordará el volumen de este sitio" },
@@ -64,6 +83,10 @@
   "statusEqOff": { "message": "Ecualizador desactivado" },
   "statusEqOn": {
     "message": "Ecualizador: $NAME$",
+    "placeholders": { "name": { "content": "$1" } }
+  },
+  "statusSurroundMode": {
+    "message": "Modo de sonido: $NAME$",
     "placeholders": { "name": { "content": "$1" } }
   }
 }

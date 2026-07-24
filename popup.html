@@ -118,6 +118,36 @@
           <span class="switch__track"><span class="switch__thumb"></span></span>
         </span>
       </label>
+
+      <!-- ── Modo de sonido (integrado en la misma tarjeta) ─────────── -->
+      <div class="surround-section">
+        <p class="surround-card__label" data-i18n="surroundCardLabel">Modo de sonido</p>
+        <div class="surround-modes" role="group" aria-label="Modo de sonido" data-i18n-aria-label="surroundGroupAria">
+          <button class="surround-mode" type="button" data-mode="stereo" aria-pressed="true" data-i18n="surroundModeStereo">Stereo 2.0</button>
+          <button class="surround-mode" type="button" data-mode="virtual21" aria-pressed="false" data-i18n="surroundModeVirtual21">Virtual 2.1</button>
+          <button class="surround-mode" type="button" data-mode="virtual51" aria-pressed="false" data-i18n="surroundModeVirtual51">Virtual 5.1</button>
+          <button class="surround-mode" type="button" data-mode="virtual71" aria-pressed="false" data-i18n="surroundModeVirtual71">Virtual 7.1</button>
+        </div>
+        <p class="surround-card__desc" id="surroundModeDesc">Audio normal, sin procesamiento.</p>
+
+        <div class="surround-card__intensity-row hidden" id="surroundIntensityRow">
+          <div class="surround-card__intensity-header">
+            <label for="surroundIntensitySlider" data-i18n="surroundIntensityLabel">Intensidad</label>
+            <span id="surroundIntensityValue">60%</span>
+          </div>
+          <input
+            type="range"
+            id="surroundIntensitySlider"
+            class="slider slider--compact"
+            min="0"
+            max="100"
+            step="5"
+            value="60"
+            aria-label="Intensidad del modo Virtual 7.1"
+            data-i18n-aria-label="surroundIntensityAria"
+          />
+        </div>
+      </div>
     </section>
 
     <!-- ── Ajustes ────────────────────────────────────────────────── -->

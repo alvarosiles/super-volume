@@ -37,6 +37,11 @@
     eqPresetButtons: Array.from(document.querySelectorAll('.eq-preset')),
     voiceBoostToggle: document.getElementById('voiceBoostToggle'),
     bassBoostToggle: document.getElementById('bassBoostToggle'),
+    surroundModeButtons: Array.from(document.querySelectorAll('.surround-mode')),
+    surroundModeDesc: document.getElementById('surroundModeDesc'),
+    surroundIntensityRow: document.getElementById('surroundIntensityRow'),
+    surroundIntensitySlider: document.getElementById('surroundIntensitySlider'),
+    surroundIntensityValue: document.getElementById('surroundIntensityValue'),
     status: document.getElementById('statusMessage'),
     siteCard: document.getElementById('siteCard'),
     themeToggle: document.getElementById('themeToggle'),
@@ -58,6 +63,8 @@
     contentScriptAvailable: true,
     theme: 'auto',
     eqPreset: 'none',
+    surroundMode: 'stereo',
+    surroundIntensity: 60,
     language: 'auto',
     tabInfoLoaded: false,
     tabTitleRaw: '',
@@ -67,6 +74,20 @@
   const THEME_ORDER = ['auto', 'light', 'dark'];
   const THEME_LABEL_KEYS = { auto: 'themeLabelAuto', light: 'themeLabelLight', dark: 'themeLabelDark' };
   const EQ_LABEL_KEYS = { none: 'eqPresetNone', cine: 'eqPresetCine', musica: 'eqPresetMusica', juegos: 'eqPresetJuegos' };
+
+  const SURROUND_MODE_ORDER = ['stereo', 'virtual21', 'virtual51', 'virtual71'];
+  const SURROUND_LABEL_KEYS = {
+    stereo: 'surroundModeStereo',
+    virtual21: 'surroundModeVirtual21',
+    virtual51: 'surroundModeVirtual51',
+    virtual71: 'surroundModeVirtual71',
+  };
+  const SURROUND_DESC_KEYS = {
+    stereo: 'surroundDescStereo',
+    virtual21: 'surroundDescVirtual21',
+    virtual51: 'surroundDescVirtual51',
+    virtual71: 'surroundDescVirtual71',
+  };
 
   const LANG_ORDER = ['auto', 'en', 'es'];
   const LANG_LABEL_KEYS = { auto: 'langLabelAuto', en: 'langLabelEn', es: 'langLabelEs' };
@@ -141,6 +162,7 @@
     refreshSiteText();
     renderMute(local.muted);
     applyTheme(local.theme);
+    els.surroundModeDesc.textContent = t(SURROUND_DESC_KEYS[local.surroundMode]);
 
     const label = t(LANG_LABEL_KEYS[local.language]);
     els.langToggleLabel.textContent = LANG_BUTTON_TEXT[local.language];
@@ -154,6 +176,23 @@
     els.eqPresetButtons.forEach((btn) => {
       btn.setAttribute('aria-pressed', String(btn.dataset.preset === local.eqPreset));
     });
+  }
+
+  /** Marca el modo de sonido activo, actualiza la descripción y muestra/oculta el slider de intensidad (solo Virtual 7.1). */
+  function applySurroundMode(mode) {
+    local.surroundMode = SURROUND_MODE_ORDER.includes(mode) ? mode : 'stereo';
+    els.surroundModeButtons.forEach((btn) => {
+      btn.setAttribute('aria-pressed', String(btn.dataset.mode === local.surroundMode));
+    });
+    els.surroundModeDesc.textContent = t(SURROUND_DESC_KEYS[local.surroundMode]);
+    els.surroundIntensityRow.classList.toggle('hidden', local.surroundMode !== 'virtual71');
+  }
+
+  /** Refleja el % de intensidad (solo relevante en Virtual 7.1) en el slider. */
+  function renderSurroundIntensity(percent) {
+    local.surroundIntensity = percent;
+    els.surroundIntensitySlider.value = percent;
+    els.surroundIntensityValue.textContent = `${percent}%`;
   }
 
   /** Aplica el tema elegido al documento y refleja el icono/estado del botón. */
@@ -323,7 +362,17 @@
       chrome.tabs.query({ active: true, currentWindow: true }),
       new Promise((resolve) =>
         chrome.storage.local.get(
-          ['rememberEnabled', 'volumes', 'theme', 'eqPreset', 'bassBoostEnabled', 'voiceBoostEnabled', 'language'],
+          [
+            'rememberEnabled',
+            'volumes',
+            'theme',
+            'eqPreset',
+            'bassBoostEnabled',
+            'voiceBoostEnabled',
+            'surroundMode',
+            'surroundIntensity',
+            'language',
+          ],
           resolve
         )
       ),
@@ -366,12 +415,14 @@
     const response = await sendToContentScript({ type: 'SV_GET_STATE' });
 
     if (response && response.ok) {
-      const { volume, muted, hasMedia, eqPreset, bassBoost, voiceBoost } = response.state;
+      const { volume, muted, hasMedia, eqPreset, bassBoost, voiceBoost, surroundMode, surroundIntensity } = response.state;
       renderVolume(volume);
       renderMute(muted);
       applyEqPreset(eqPreset);
       els.voiceBoostToggle.checked = Boolean(voiceBoost);
       els.bassBoostToggle.checked = Boolean(bassBoost);
+      renderSurroundIntensity(typeof surroundIntensity === 'number' ? surroundIntensity : 60);
+      applySurroundMode(surroundMode);
       local.volumeBeforeMute = muted ? savedVolume : volume;
       els.noMediaBadge.classList.toggle('hidden', hasMedia);
       updateBadge(volume);
@@ -384,6 +435,8 @@
       applyEqPreset(stored.eqPreset);
       els.voiceBoostToggle.checked = Boolean(stored.voiceBoostEnabled);
       els.bassBoostToggle.checked = Boolean(stored.bassBoostEnabled);
+      renderSurroundIntensity(typeof stored.surroundIntensity === 'number' ? stored.surroundIntensity : 60);
+      applySurroundMode(stored.surroundMode);
       local.noContentScript = true;
       refreshSiteText();
       els.noMediaBadge.classList.remove('hidden');
@@ -393,6 +446,8 @@
       els.eqPresetButtons.forEach((btn) => { btn.disabled = true; });
       els.voiceBoostToggle.disabled = true;
       els.bassBoostToggle.disabled = true;
+      els.surroundModeButtons.forEach((btn) => { btn.disabled = true; });
+      els.surroundIntensitySlider.disabled = true;
       showStatus(t('statusNoAudioPage'));
     }
   }
@@ -450,6 +505,27 @@
     chrome.storage.local.set({ bassBoostEnabled: enabled });
     sendToContentScript({ type: 'SV_SET_BASS_BOOST', value: enabled });
     showStatus(t(enabled ? 'statusBassBoostOn' : 'statusBassBoostOff'));
+  });
+
+  els.surroundModeButtons.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const mode = btn.dataset.mode;
+      if (mode === local.surroundMode) return;
+      applySurroundMode(mode);
+      chrome.storage.local.set({ surroundMode: mode });
+      sendToContentScript({ type: 'SV_SET_SURROUND_MODE', value: mode });
+      showStatus(t('statusSurroundMode', [t(SURROUND_LABEL_KEYS[local.surroundMode])]));
+    });
+  });
+
+  els.surroundIntensitySlider.addEventListener('input', () => {
+    const value = Number(els.surroundIntensitySlider.value);
+    renderSurroundIntensity(value);
+    sendToContentScript({ type: 'SV_SET_SURROUND_INTENSITY', value });
+  });
+
+  els.surroundIntensitySlider.addEventListener('change', () => {
+    chrome.storage.local.set({ surroundIntensity: Number(els.surroundIntensitySlider.value) });
   });
 
   els.themeToggle.addEventListener('click', () => {
